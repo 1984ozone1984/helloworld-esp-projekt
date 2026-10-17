@@ -8,7 +8,7 @@ them is observable from outside the running device.
 | Layer | FSD component | Module (ESP-IDF component) | Pure core (host tier) |
 |---|---|---|---|
 | L2 | Boot banner (§5) | `components/boot_banner` | `reset_reason_name()` |
-| L2 | Heartbeat (§6) | `components/heartbeat` | `heartbeat_next()` counter step |
+| L2 | Heartbeat (§6) | `components/heartbeat` | `heartbeat_counter_next()` |
 | L2 | Blinker (§7) | `components/blinker` | `blink_toggle()` |
 | L1 | Console line format (§8) | `components/console_fmt` | `fmt_banner()`, `fmt_heartbeat()`, `fmt_led()`, `fmt_fault()` |
 | L1 | LED driver (§9) | `components/led` | `led_level()` — on → 0, off → 1 (active-low) |

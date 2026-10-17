@@ -76,9 +76,9 @@ def image(bench, slot, coldflash):
 
 @pytest.fixture(scope="session")
 def boot(bench, slot, image):
-    """Console lines from one hard reset, including 6 s after the banner."""
+    """Console lines from one hard reset, including 11 s after the banner."""
     from console import reset_and_capture
-    return reset_and_capture(bench, slot, after_banner_s=6.0)
+    return reset_and_capture(bench, slot, after_banner_s=11.0)
 
 
 @pytest.fixture(scope="session")
