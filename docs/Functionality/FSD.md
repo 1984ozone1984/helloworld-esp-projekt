@@ -3,10 +3,7 @@
 Provenance tags: `[user]` stated by the user · `[derived]` consequence of a
 `[user]` requirement · `[pack:esp32]` proposed by the ESP32 domain pack and
 accepted by the user · `[tooling]` harvested from the project's pinned build
-tooling. Every requirement below is `status: approved` unless marked otherwise.
-Values marked `(proposed)` were proposed while writing this document and are
-`status: proposed` until the author accepts them — see `open_decisions` in
-Appendix B.
+tooling. Every requirement below is `status: approved`.
 
 ## 1. System Overview
 
@@ -257,7 +254,7 @@ running.
 - **FR-HB-03** [Should] `[user]`: The `uptime_ms` field shall increase by
   1000 ms ± 50 ms between consecutive heartbeat lines.
 - **NFR-HB-04** [Should] `[derived]`: Over any 60 s window measured on the host
-  clock, the host shall receive 60 ± 1 (proposed) heartbeat lines.
+  clock, the host shall receive 60 ± 1 heartbeat lines.
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -341,17 +338,16 @@ the timeout, the subscribed tasks and the panic-on-timeout policy are ours.
 
 **Requirements**
 - **FR-WDT-01** [Must] `[pack:esp32]`: If the blink task or the heartbeat task
-  stops resetting the TWDT, the device shall reset within 5 s (+1.5 s / −0.5 s
-  (proposed)) of the stall.
+  stops resetting the TWDT, the device shall reset within 5 s (+1.5 s / −0.5 s) of the stall.
 - **FR-WDT-02** [Must] `[derived]`: The first banner after a TWDT-caused reset
   shall report `reset_reason=TASK_WDT`.
 - **FR-WDT-03** [Must] `[derived]`: After a TWDT-caused reset the device shall
-  return to RUNNING — banner, then heartbeat `n=1` within 1.5 s (proposed) of
+  return to RUNNING — banner, then heartbeat `n=1` within 1.5 s of
   the banner — without operator action.
 - **NFR-WDT-04** [Must] `[derived]`: With a host reading the console, the
-  device shall run for 10 min (proposed) without a reset.
-- **NFR-WDT-05** [Must] `[derived]`: With no host reading the console for 60 s
-  (proposed), the device shall not reset.
+  device shall run for 10 min without a reset.
+- **NFR-WDT-05** [Must] `[derived]`: With no host reading the console for 60 s,
+  the device shall not reset.
 
 **Fault injection.** Stalls are injected by a separate build variant
 (`CONFIG_HELLO_FAULT_STALL_TASK` = `blink` | `heartbeat`, default `none`),
@@ -580,25 +576,20 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.1
+fsd_version: 0.1.2
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
 author: Stefan
 reviewers: []
-approval_status: pending author review
+approval_status: approved by author
 created: 2026-10-17
 last_updated: 2026-10-17
 change_history:
   - 2026-10-17 0.1.0 initial baseline
   - 2026-10-17 0.1.1 board is XIAO ESP32S3 Sense; user LED GPIO21, active-low
+  - 2026-10-17 0.1.2 proposed watchdog and timing values accepted by author
 superseded_requirements: []
-open_decisions:
-  - proposed values awaiting acceptance; each gates the requirement named
-    FR-WDT-01 tolerance +1.5 s / -0.5 s
-    FR-WDT-03 banner -> n=1 within 1.5 s
-    NFR-WDT-04 soak length 10 min
-    NFR-WDT-05 console-closed window 60 s
-    NFR-HB-04 tolerance +/- 1 line per 60 s
+open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
 ```
