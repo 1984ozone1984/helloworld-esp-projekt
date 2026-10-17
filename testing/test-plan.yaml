@@ -70,8 +70,13 @@ capabilities:
       Forward path: CI run 39057559541 (commit c2761e2), artefact
       firmware-c2761e2, flashed via /api/flash at the offsets in its
       flash_args (0x0 bootloader.bin, 0x8000 partition-table.bin,
-      0x10000 helloworld-esp.bin), hash verified; marker "main: ON" / "main: OFF"
-      observed every 1000 ms.
+      0x10000 helloworld-esp.bin), hash verified. From that image, "main: Init complete"
+      was observed after each of 5 bench resets (see dut-console-after-reset), and the
+      periodic marker "main: ON" / "main: OFF" every 1000 ms.
+    limit: >-
+      The bench cannot report which image is on the device; the link is that ON/OFF
+      and "Init complete" are exactly what c2761e2 prints. From Wave 1 the banner's
+      version field (FR-BOOT-02) closes this.
     consequence: /api/serial/monitor matches its pattern as a literal substring, not a regex
   dut-console-after-reset:
     what: The first console line after a bench reset reaches the bench despite native-USB re-enumeration
