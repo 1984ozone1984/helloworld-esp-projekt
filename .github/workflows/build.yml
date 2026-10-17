@@ -115,6 +115,20 @@ jobs:
           name: firmware-${{ steps.plan.outputs.artefact }}
           path: out/
 
+      # Host tier on the artefact itself: chip, IDF, partitions, size, no fault path.
+      - name: Check the image (tests/artefact)
+        if: steps.plan.outputs.variant == 'production'
+        run: |
+          python3 -m venv /tmp/pyenv && /tmp/pyenv/bin/pip -q install 'pytest==8.*'
+          COLDFLASH_DIR=out/coldflash /tmp/pyenv/bin/python -m pytest tests/artefact -q \
+            -p no:cacheprovider --junitxml=out/artefact-junit.xml
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.plan.outputs.variant == 'production'
+        with:
+          name: artefact-junit
+          path: out/artefact-junit.xml
+
   verify:
     # The journey on the exact bytes that would be published. Red => no release.
     # An unreachable bench is an unmet precondition: the job fails, nothing

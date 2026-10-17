@@ -30,7 +30,7 @@ class Line:
         return rx.match(self.text.rstrip("\r\n"))
 
 
-def fetch(bench, slot, since, lines=2000):
+def fetch(bench, slot, since, lines=5000):
     res = bench.serial_output(slot=slot, lines=lines, since=since)
     return [Line(e["ts"], e["text"]) for e in res.get("lines") or []]
 

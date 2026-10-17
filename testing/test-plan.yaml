@@ -65,6 +65,14 @@ capabilities:
   bench-wifi-scan:
     what: WiFi scan from the bench radio (GET /api/wifi/scan)
     available: yes
+    observed: >-
+      2026-10-17. Results carry ssid, rssi, auth and channel only, no BSSID. With the
+      bench AP up the scan refuses ("cannot scan while the AP is running"), although
+      the bench's FR-013 says it works alongside the AP.
+    consequence: >-
+      The DUT cannot be identified in a WiFi scan, so NFR-SEC-01's WiFi half is checked
+      on the image (FSD 0.1.5). Testbench change request: FR-013 and the live behaviour
+      disagree about scanning while the AP runs.
   bench-ble-scan:
     what: BLE advertisement scan (POST /api/ble/scan)
     available: yes
@@ -422,6 +430,98 @@ tests:
     impl: human-acceptance
     status: not done
     reason: acceptance not recorded
+
+  # §2.2 constraints · §13 build · §14 security (image checks run in build.yml)
+  - id: TC-CON-01
+    name: Image built for esp32s3 with ESP-IDF v6.0.2
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: host
+    verifies: [CON-01]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_con_01_chip_and_idf
+    status: not done
+    reason: not run on the current commit
+  - id: TC-CON-02-host
+    name: Image header says 8 MB flash
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: host
+    verifies: [CON-02]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_con_02_header_flash_size
+    status: not done
+    reason: not run on the current commit
+  - id: TC-CON-02
+    name: DUT reports at least 8 MB flash
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: target
+    verifies: [CON-02]
+    needs: [bench-flash]
+    impl: tests/target/test_boot.py::test_tc_con_02_dut_flash_size
+    status: not done
+    reason: not run on the current commit
+  - id: TC-CON-03
+    name: Single-factory partitions at stated offsets, app <= 1 MB
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: host
+    verifies: [CON-03]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_con_03_partitions_and_size
+    status: not done
+    reason: not run on the current commit
+  - id: TC-BUILD-01
+    name: Release image has no fault-injection path
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: host
+    verifies: [FR-BUILD-01]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_build_01_no_fault_path
+    status: not done
+    reason: not run on the current commit
+  - id: TC-SEC-01-host
+    name: No WiFi, PHY or Bluetooth stack linked
+    shape: atomic
+    kind: security
+    wave: 1
+    tier: host
+    verifies: [NFR-SEC-01]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_sec_01_no_radio_stack
+    status: not done
+    reason: not run on the current commit
+  - id: TC-SEC-01
+    name: No BLE advertising from the DUT's addresses
+    shape: atomic
+    kind: security
+    wave: 1
+    tier: bench
+    verifies: [NFR-SEC-01]
+    needs: [bench-ble-scan]
+    impl: tests/bench/test_radio.py::test_tc_sec_01_ble_silent
+    status: not done
+    reason: not run on the current commit
+
+  # §11 Task watchdog — normal operation
+  - id: TC-WDT-04
+    name: 10 min RUNNING with a host reading, no reset
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: target
+    verifies: [NFR-WDT-04]
+    needs: [bench-serial-reset, bench-serial-monitor]
+    impl: tests/target/test_soak.py::test_tc_wdt_04_soak_10_min
+    status: not done
+    reason: not run on the current commit
 
 gates:
   load-defined: {verdict: null, date: null, commit: null}

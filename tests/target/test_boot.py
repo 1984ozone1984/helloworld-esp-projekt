@@ -40,3 +40,10 @@ def test_tc_con_04_console_is_usb_serial_jtag(bench, slot, boot):
     products = [u.get("product", "") for u in s.get("usb_devices") or []]
     assert any("USB JTAG/serial" in p for p in products), products
     _one_banner(boot)
+
+
+def test_tc_con_02_dut_flash_size(bench, slot, image):
+    """TC-CON-02 · CON-02 (b): the DUT reports at least 8 MB of flash."""
+    info = bench.chip_info(slot)
+    size = info.get("flash_size", "")
+    assert size.endswith("MB") and int(size[:-2]) >= 8, info

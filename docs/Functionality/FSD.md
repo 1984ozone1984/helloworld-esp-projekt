@@ -507,7 +507,8 @@ The version identity of an image is FR-BOOT-02.
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
-| NFR-SEC-01 | DUT RUNNING; DUT base MAC read with `esptool.py read_mac` · testbench WiFi scan and BLE scan, 30 s each | No BSSID or BLE address within base MAC … base MAC + 3 | Any DUT-derived address seen | bench |
+| NFR-SEC-01 (a) | Release ELF · read its symbol table; positive control: `app_main` and `esp_reset_reason` present | No WiFi, PHY or Bluetooth stack linked (`esp_wifi_init`, `esp_phy_enable`, `esp_bt_controller_init`, `nimble_port_init` absent) | Any of those symbols present; positive control missing (check void) | host |
+| NFR-SEC-01 (b) | DUT RUNNING; DUT base MAC from its chip info · testbench BLE scan, 30 s; positive control: other devices seen | No BLE address within base MAC … base MAC + 3 | Any DUT-derived address seen | bench |
 
 **Accepted risks.** No secure boot, flash encryption, or image signing. JTAG
 stays enabled. Anyone with USB access can read, alter, or replace the firmware.
@@ -580,7 +581,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.4
+fsd_version: 0.1.5
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -595,6 +596,7 @@ change_history:
   - 2026-10-17 0.1.2 proposed watchdog and timing values accepted by author
   - 2026-10-17 0.1.3 LED check: FR-LED-03 to May (human acceptance), CON-05 by host test + review; no instrument can see GPIO21
   - 2026-10-17 0.1.4 FR-BOOT-01 measured by the banner's device timestamp; bench reset latency (10-11 s, batched output) makes the host clock unusable
+  - 2026-10-17 0.1.5 NFR-SEC-01 WiFi half verified by the image's symbol table; the bench WiFi scan reports no BSSIDs
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
