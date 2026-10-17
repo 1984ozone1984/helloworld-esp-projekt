@@ -33,8 +33,6 @@ into its own build directory. Release images never use it (FSD FR-BUILD-01).
 
 ## Managed components
 
-- `espressif/led_strip` is declared in `main/idf_component.yml` (or the `led`
-  component's manifest).
 - `dependencies.lock` is committed; `managed_components/` is not.
 - Declare `REQUIRES`/`PRIV_REQUIRES` only for what the code includes today. A
   speculative requirement fails at configure time and names the component, not

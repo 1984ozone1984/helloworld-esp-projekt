@@ -11,7 +11,7 @@ them is observable from outside the running device.
 | L2 | Heartbeat (§6) | `components/heartbeat` | `heartbeat_next()` counter step |
 | L2 | Blinker (§7) | `components/blinker` | `blink_toggle()` |
 | L1 | Console line format (§8) | `components/console_fmt` | `fmt_banner()`, `fmt_heartbeat()`, `fmt_led()`, `fmt_fault()` |
-| L1 | LED driver (§9) | `components/led` | — (thin wrapper over `led_strip`) |
+| L1 | LED driver (§9) | `components/led` | `led_level()` — on → 0, off → 1 (active-low) |
 | test | Fault injection (§11) | `components/fault_inject` | — |
 | root | Composition | `main/` (`app_main`) | — |
 
@@ -32,7 +32,8 @@ when it is configured. No other module knows about the composition.
   `CONFIG_HELLO_FAULT_STALL_TASK` is not `none`. Production modules contain no
   `#ifdef` for it; the hook is registered from `main/`.
 - **No PSRAM.** `CONFIG_SPIRAM` stays disabled. The firmware does not need it,
-  and a PSRAM mode that does not match the N8R8's octal PSRAM fails at boot.
+  and a PSRAM mode that does not match the XIAO ESP32S3's octal PSRAM fails at
+  boot.
 
 ## Test layout
 

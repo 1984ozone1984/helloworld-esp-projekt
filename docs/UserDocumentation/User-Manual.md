@@ -18,9 +18,10 @@ been built. Chapters 2–5 are filled in as the build phases deliver.
 
 ## 1. What you need
 
-- An ESP32-S3-DevKitC-1 board, module **N8R8** (8 MB flash), revision v1.0
-  (RGB LED on GPIO48).
-- A USB cable to the board's port labelled **USB**, not the one labelled **UART**.
+- A Seeed Studio **XIAO ESP32S3 Sense** (8 MB flash). The firmware blinks the
+  orange user LED (GPIO21). Leave the microSD slot empty, because GPIO21 is also
+  its chip select.
+- A USB-C data cable (not charge-only).
 - Either a testbench slot, or a Linux/macOS/Windows PC with Docker to run the
   `espressif/idf:v6.0.2` build container.
 - No accounts, credentials, or network access are needed to run the device.

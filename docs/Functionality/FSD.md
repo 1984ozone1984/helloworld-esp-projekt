@@ -46,14 +46,17 @@ Nothing flows into the device after flashing.
 ```text
  ESP32-S3 DUT ──USB-Serial/JTAG (log lines)──▶ testbench / host
      │
-     └──GPIO48 (WS2812 data)──▶ onboard RGB LED ──light──▶ operator
+     └──GPIO21 (active-low)──▶ onboard user LED ──light──▶ operator
 ```
 
 ### 2.2 Hardware / Platform Architecture
 
-**Board** `[user]`: Espressif ESP32-S3-DevKitC-1, module variant **N8R8**
-(8 MB flash, 8 MB octal PSRAM). Powered and observed through the board's
-**USB** port (native USB-Serial/JTAG), not the **UART** port.
+**Board** `[user]`: Seeed Studio **XIAO ESP32S3 Sense** (ESP32-S3R8, 8 MB
+flash, 8 MB octal PSRAM), with its camera/microphone/microSD expansion board.
+Powered and observed through its single USB-C port, which is the native
+USB-Serial/JTAG controller. The onboard user LED is on GPIO21 and is
+active-low: driving the pin low lights it `[derived]` from the board
+documentation.
 
 Constraints the build reads — each is a number a toolchain would otherwise take
 from a default:
@@ -64,7 +67,7 @@ from a default:
 | CON-02 [Must] | The image shall be configured for **8 MB** flash. A unit with less than 8 MB flash is not a supported target. | `[user]` |
 | CON-03 [Must] | The partition table shall be the single-factory-app layout: `nvs` at 0x9000 (24 KB), `phy_init` at 0xF000 (4 KB), `factory` at 0x10000 (1 MB). The application image shall not exceed 1 MB. | `[derived]` from the no-OTA non-goal |
 | CON-04 [Must] | The primary console shall be the USB-Serial/JTAG controller. | `[user]` |
-| CON-05 [Must] | The LED shall be the single WS2812-compatible RGB LED on **GPIO48**. | `[user]` |
+| CON-05 [Must] | The LED shall be the onboard user LED on **GPIO21**, driven as a push-pull output, with low = lit. | `[user]` pin · `[derived]` polarity |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -72,7 +75,7 @@ from a default:
 | CON-02 | Release artefact · `esptool.py image_info`; DUT · `esptool.py flash_id` | Image header flash size 8 MB; DUT reports ≥ 8 MB | Header size ≠ 8 MB | target |
 | CON-03 | Release artefact · read partition table and app size | Table matches the offsets/sizes above; app ≤ 1 048 576 bytes | Extra or moved partitions; app > 1 MB | host |
 | CON-04 | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | Banner only on UART0 | target |
-| CON-05 | DUT RUNNING · operator prompt "Is the RGB LED blinking? (ignore the always-on red power LED)" | Operator answers yes | Only the always-on red power LED lit; RGB LED dark or steady | bench |
+| CON-05 | DUT RUNNING · operator prompt "Is the orange user LED blinking? (ignore the red charge LED)" | Operator answers yes | Only the charge LED changes; user LED dark or steady | bench |
 
 ### 2.3 Software Architecture
 
@@ -138,7 +141,7 @@ flowchart TB
   subgraph L0["L0 — Foundation / platform"]
     RT["FreeRTOS + esp_timer"]
     UJ["USB-Serial/JTAG console"]
-    LS["led_strip (RMT)"]
+    LS["GPIO driver"]
     WD["Task Watchdog"]
     SY["esp_system (reset reason, app desc)"]
   end
@@ -153,8 +156,8 @@ flowchart TB
 - **L2 Application logic** — Boot banner (§5), Heartbeat (§6), Blinker (§7):
   the project's own decisions about what to say and when.
 - **L1 Interfaces** — Console line format (§8): the line grammar a host parses,
-  owned by this project. LED driver (§9): the mapping from on/off to a WS2812
-  colour.
+  owned by this project. LED driver (§9): the mapping from on/off to a GPIO21
+  level.
 - **L0 Foundation** — ESP-IDF platform services configured, not implemented
   (§10), and the Task Watchdog (§11). Tested transitively.
 
@@ -171,7 +174,7 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
   the pure formatters; target-tier tests on the testbench.
 - **Exit criteria:** CON-01…CON-04, FR-BOOT-01, FR-BOOT-03, FR-HB-01…NFR-HB-04,
   FR-LOG-01, FR-LOG-02 pass.
-- **Depends on:** a testbench slot with the DevKitC-1 connected by its USB port,
+- **Depends on:** a testbench slot with the XIAO ESP32S3 Sense connected by USB-C,
   commissioned (journey Phase 2). Nothing from this FSD.
 
 ### 3.2 Phase 2 — Blink, watchdog, versioned release
@@ -192,23 +195,24 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
 | A chip reset re-enumerates the native USB device and output emitted before the host reopens the port is lost, so the banner is unobservable | Medium | High (FR-BOOT-01, FR-WDT-02 unverifiable) | Debugging-agenda item for commissioning; observe with the testbench serial monitor, which reconnects and opens with DTR/RTS low |
 | Opening the console with DTR or RTS asserted halts the chip (download mode / held in reset), reading as a firmware hang | High | Medium | Every observer opens the port with both lines low — Method `standards/testing.md` P-SERIAL |
 | The USB-Serial/JTAG console blocks when no host reads, starving a watchdog-subscribed task | Medium | High | NFR-WDT-05 makes the behaviour normative and tested |
-| WS2812 retains its last colour across an MCU reset, so the LED can look "on" while the firmware is not running | High | Low | Operator check (FR-LED-03) observes alternation, not a single state |
-| Board revision v1.1 of DevKitC-1 routes the RGB LED to GPIO38 | Low | Medium | CON-05 fixes GPIO48; a v1.1 board fails FR-LED-03 visibly |
+| GPIO21 is also the microSD chip select on the Sense expansion board; a card in the slot sees CS toggle at 1 Hz | Low | Low | The microSD slot is out of scope and stays empty |
+| The LED polarity is wrong (lit when it should be dark) | Low | Low | Invisible to the operator check, which judges blinking only; polarity is fixed by CON-05 and reviewed in the LED driver's host test |
 
 **Assumptions**
-- The DUT is a DevKitC-1 board revision v1.0 (LED on GPIO48) `[user]`.
+- The DUT is a XIAO ESP32S3 Sense with its user LED on GPIO21 `[user]`.
 - The testbench can issue a hard reset over USB-Serial/JTAG and capture console
   output from the first line after reconnect `[derived]` — confirmed during
   commissioning.
 
 **Dependencies**
 - ESP-IDF v6.0.2 (`espressif/idf:v6.0.2`).
-- Managed component `espressif/led_strip` (not bundled with ESP-IDF).
 - The Embedded AI Harness testbench: serial monitor, hard reset, WiFi and BLE
   scan, operator prompt.
 
 **Explicitly out of scope** (considered and declined)
 - WiFi connection, OTA updates `[user]` — the minimal scope was chosen over both.
+- The Sense expansion board's camera, microphone and microSD slot `[derived]` —
+  present on the hardware, unused by the firmware.
 - From the ESP32 pack, not adopted: MQTT, captive portal, BLE, NVS persistence,
   UDP logging, USB HID, Ethernet.
 
@@ -312,12 +316,11 @@ start-up output, panic reports) may appear and are not normative.
 
 ## 9. LED Driver
 
-**Purpose & peer.** Maps the blinker's on/off state onto the WS2812 RGB LED on
-GPIO48 (CON-05). The peer is the LED itself.
+**Purpose & peer.** Maps the blinker's on/off state onto the user LED on
+GPIO21 (CON-05). The peer is the LED itself.
 
-**Mapping.** `off` → RGB (0, 0, 0). `on` → any fixed non-zero colour (not
-normative). The driver owns the WS2812 GRB byte order through the `led_strip`
-component.
+**Mapping.** `on` → GPIO21 low. `off` → GPIO21 high. The pin is configured as
+an output, driven high (LED dark), before the first blink.
 
 **Requirements.** None of its own; verified transitively through FR-LED-03.
 
@@ -326,7 +329,7 @@ component.
 ## 10. ESP-IDF Platform
 
 **Purpose.** FreeRTOS scheduling, `esp_timer`, the USB-Serial/JTAG console
-driver, the `led_strip` RMT driver, `esp_reset_reason()` and the application
+driver, the GPIO driver, `esp_reset_reason()` and the application
 description. Configured, not implemented, and tested transitively through
 §5–§9. Constraints on it are CON-01…CON-04 (§2.2).
 
@@ -466,7 +469,7 @@ persistent storage.
 | Blink half-period | 500 ms | FR-LED-01 |
 | Heartbeat period | 1000 ms | FR-HB-01 |
 | TWDT timeout | 5 s, panic on timeout, blink + heartbeat tasks subscribed | FR-WDT-01 |
-| LED GPIO | 48 | CON-05 |
+| LED GPIO | 21, active-low | CON-05 |
 | Flash size | 8 MB | CON-02 |
 | Partition table | single factory app | CON-03 |
 | Console | USB-Serial/JTAG | CON-04 |
@@ -577,7 +580,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.0
+fsd_version: 0.1.1
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -588,6 +591,7 @@ created: 2026-10-17
 last_updated: 2026-10-17
 change_history:
   - 2026-10-17 0.1.0 initial baseline
+  - 2026-10-17 0.1.1 board is XIAO ESP32S3 Sense; user LED GPIO21, active-low
 superseded_requirements: []
 open_decisions:
   - proposed values awaiting acceptance; each gates the requirement named
