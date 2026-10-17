@@ -1,7 +1,7 @@
 """FSD §11 NFR-WDT-04 — 10 minutes RUNNING with a host reading, no reset."""
 import pytest
 
-from console import BANNER, HEARTBEAT, PANIC_REPORT, capture_for, matches
+from tests.target.console import BANNER, HEARTBEAT, PANIC_REPORT, capture_for, matches
 
 
 @pytest.mark.slow

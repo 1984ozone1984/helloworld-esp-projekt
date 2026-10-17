@@ -1,7 +1,7 @@
 """FSD §7 Blinker — target tier (testing/test-plan.yaml)."""
 import pytest
 
-from console import LED, matches
+from tests.target.console import LED, matches
 
 def _leds(lines):
     return [(int(m.group(1)), m.group(2)) for _, m in matches(lines, LED)]

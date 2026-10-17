@@ -38,7 +38,22 @@ when it is configured. No other module knows about the composition.
 ## Test layout
 
 ```text
-tests/host/      pure cores, plain CMake + compiler, no ESP-IDF
+tests/host/      pure cores, plain CMake + compiler, no ESP-IDF (ci.yml)
+tests/artefact/  host-tier checks on the CI image bytes and ELF (build.yml)
 tests/target/    pytest against the DUT console via the testbench (P-SERIAL)
-tests/bench/     operator and RF-scan checks via the testbench
+tests/bench/     RF checks against bench peers (BLE scan)
+tests/conftest.py  DUT fixtures: bench, slot (found by MAC), image, boot, steady
+tools/record_results.py  writes results from JUnit into testing/test-plan.yaml
 ```
+
+Local target/bench run, against a CI artefact:
+
+```bash
+gh run download <build-run-id> -n firmware-<version> -D art/firmware-<version>
+COLDFLASH_DIR=art/firmware-<version>/coldflash TESTBENCH_URL=http://<bench>:8080 \
+  PYTHONPATH=<Embedded-AI-Harness>/pytest pytest tests/target tests/bench --junitxml=target-junit.xml
+python3 tools/record_results.py --commit <version> target-junit.xml
+```
+
+Console captures read the first boot only after a reset, and long windows in
+chunks — both forced by bench limits recorded on the plan's capabilities.

@@ -1,7 +1,7 @@
 """FSD §6 Heartbeat — target tier (testing/test-plan.yaml)."""
 import pytest
 
-from console import HEARTBEAT, matches
+from tests.target.console import HEARTBEAT, matches
 
 def _beats(lines):
     return [(ln, int(m.group(1)), int(m.group(2)), int(m.group(3))) for ln, m in matches(lines, HEARTBEAT)]

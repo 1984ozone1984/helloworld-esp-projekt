@@ -6,8 +6,8 @@ Recovery after partial execution: re-run the whole journey from JRN-01.1.
 """
 import pytest
 
-from dutfixtures import flash_images
-from console import BANNER, HEARTBEAT, LED, PANIC_REASONS, PANIC_REPORT, matches, reset_and_capture
+from tests.conftest import flash_images
+from tests.target.console import BANNER, HEARTBEAT, LED, PANIC_REASONS, PANIC_REPORT, matches, reset_and_capture
 
 pytestmark = pytest.mark.journey
 

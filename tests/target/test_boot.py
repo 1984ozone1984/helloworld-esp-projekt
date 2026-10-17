@@ -1,7 +1,7 @@
 """FSD §5 Boot banner and §2.2 CON-04 — target tier (testing/test-plan.yaml)."""
 import pytest
 
-from console import BANNER, PANIC_REPORT, matches
+from tests.target.console import BANNER, PANIC_REPORT, matches
 
 NON_PANIC = {"POWERON", "EXT", "SW", "USB", "JTAG"}
 

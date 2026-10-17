@@ -13,7 +13,7 @@ dut:
   board: Seeed XIAO ESP32S3 Sense
   chip: esp32s3
   flash: 8MB
-  slot: SLOT1
+  slot: SLOT4             # last seen; tests find the DUT by MAC (SLOT1 until the bench restart, 2026-10-17)
   observed:               # /commission, 2026-10-17, POST /api/chip/info
     date: 2026-10-17
     chip: ESP32-S3 (QFN56)
@@ -30,7 +30,7 @@ testbench:
   url: http://192.168.8.70:8080
   portal_version: not reported   # /api/info has no version field
   last_seen: 2026-10-17
-  slots_configured: 4
+  slots_configured: 10    # was 4 before the bench restart, 2026-10-17
 
 capabilities:
   # --- Bench capabilities: declared by the testbench (Harness-FSD, Appendix D)
@@ -41,6 +41,8 @@ capabilities:
   bench-serial-monitor:
     what: Capture DUT console lines with pattern match and a recorded buffer (/api/serial/monitor, /api/serial/output)
     available: yes
+    observed: 2026-10-17. The recorded buffer holds the last 1000 lines (355 s of this firmware's output).
+    consequence: Windows longer than ~5 min are read in 60 s chunks (tests/target/console.py capture_for).
   bench-serial-reset:
     what: Hard-reset the DUT through POST /api/serial/reset
     available: yes
@@ -76,6 +78,11 @@ capabilities:
   bench-ble-scan:
     what: BLE advertisement scan (POST /api/ble/scan)
     available: yes
+    observed: >-
+      2026-10-17. timeout 5/10/20 s returns 8-9 devices; timeout 30 s returns ok:false
+      with an empty error.
+    consequence: >-
+      Scan in 15 s pieces. Testbench change request: a 30 s scan fails without a reason.
   bench-operator-prompt:
     what: Block on an operator yes/no answered in the portal UI (POST /api/human-interaction)
     available: yes
@@ -155,7 +162,7 @@ tests:
     observable: /api/flash returns ok for every image in coldflash/flash_args
     impl: tests/target/test_journey.py::test_jrn_01_1_flash
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: JRN-01.2
     name: Banner after reset
     shape: workflow
@@ -168,7 +175,7 @@ tests:
     observable: banner matching FSD A.1 within 3 s; version equals the flashed image's; reset_reason non-panic
     impl: tests/target/test_journey.py::test_jrn_01_2_banner
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: JRN-01.3
     name: Heartbeat running
     shape: workflow
@@ -181,7 +188,7 @@ tests:
     observable: heartbeat n=1, 2, 3 within 3.5 s of the banner, spaced 950–1050 ms
     impl: tests/target/test_journey.py::test_jrn_01_3_heartbeat
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: JRN-01.4
     name: LED toggling
     shape: workflow
@@ -194,7 +201,7 @@ tests:
     observable: led lines on/off/on/off within 2.5 s, spaced 450–550 ms
     impl: tests/target/test_journey.py::test_jrn_01_4_led
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: JRN-01.5
     name: Operator sees the blink
     shape: workflow
@@ -226,7 +233,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor, dut-console-after-reset]
     impl: tests/target/test_boot.py::test_tc_boot_01_banner_within_3s
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-BOOT-02
     name: Banner version equals the image's git describe
     shape: atomic
@@ -237,7 +244,7 @@ tests:
     needs: [bench-flash, bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_boot.py::test_tc_boot_02_version_is_the_images
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-BOOT-03-host
     name: Every esp_reset_reason_t value maps to its A.2 name
     shape: atomic
@@ -248,7 +255,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/host/test_reset_reason.c
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-BOOT-03
     name: Bench hard reset reports a non-panic reset reason
     shape: atomic
@@ -259,7 +266,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_boot.py::test_tc_boot_03_reset_reason_after_bench_reset
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-CON-04
     name: Banner arrives on the USB-Serial/JTAG port
     shape: atomic
@@ -270,7 +277,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_boot.py::test_tc_con_04_console_is_usb_serial_jtag
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-LOG-01
     name: Banner, heartbeat and LED lines on the USB console
     shape: atomic
@@ -281,7 +288,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_console.py::test_tc_log_01_lines_on_usb_console
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-LOG-02-host
     name: Line bodies match A.1, no escapes, truncation reported
     shape: atomic
@@ -292,7 +299,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/host/test_console_fmt.c
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-LOG-02
     name: Every hello/led/fault line on the wire matches A.1
     shape: atomic
@@ -303,7 +310,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_console.py::test_tc_log_02_every_normative_line_matches
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
 
   # §6 Heartbeat
   - id: TC-HB-01
@@ -316,7 +323,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_heartbeat.py::test_tc_hb_01_period
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-HB-02-host
     name: Counter starts at 1, steps by 1, restarts on init
     shape: atomic
@@ -327,7 +334,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/host/test_heartbeat.c
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-HB-02
     name: After a reset n runs 1..10
     shape: atomic
@@ -338,7 +345,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor, bench-single-reset]
     impl: tests/target/test_heartbeat.py::test_tc_hb_02_counter_from_reset
     status: not done
-    commit: 650b1c2
+    commit: 6e091e1
     reason: 'not done: needs bench-single-reset — one boot yields only 5 heartbeats'
   - id: TC-HB-03
     name: uptime_ms grows 950-1050 per heartbeat
@@ -350,7 +357,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_heartbeat.py::test_tc_hb_03_uptime
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-HB-04
     name: 59-61 heartbeats per 60 s host time, no bursts
     shape: atomic
@@ -361,7 +368,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_heartbeat.py::test_tc_hb_04_host_rate
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
 
   # §7 Blinker · §9 LED driver · CON-05
   - id: TC-LED-01
@@ -374,7 +381,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_blinker.py::test_tc_led_01_toggle_period
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-LED-02-host
     name: Toggle from off alternates on/off
     shape: atomic
@@ -385,7 +392,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/host/test_blinker.c
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-LED-02
     name: LED lines alternate on the wire
     shape: atomic
@@ -396,7 +403,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_blinker.py::test_tc_led_02_alternates
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-CON-05-host
     name: Active-low mapping, on -> 0 and off -> 1
     shape: atomic
@@ -407,7 +414,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/host/test_blinker.c
     status: successful
-    commit: 650b1c2
+    commit: 6e091e1
   - id: TC-CON-05-review
     name: LED driver drives GPIO21 push-pull, high before the first blink
     shape: atomic
@@ -441,8 +448,8 @@ tests:
     verifies: [CON-01]
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_01_chip_and_idf
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
   - id: TC-CON-02-host
     name: Image header says 8 MB flash
     shape: atomic
@@ -452,8 +459,8 @@ tests:
     verifies: [CON-02]
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_02_header_flash_size
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
   - id: TC-CON-02
     name: DUT reports at least 8 MB flash
     shape: atomic
@@ -463,8 +470,8 @@ tests:
     verifies: [CON-02]
     needs: [bench-flash]
     impl: tests/target/test_boot.py::test_tc_con_02_dut_flash_size
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
   - id: TC-CON-03
     name: Single-factory partitions at stated offsets, app <= 1 MB
     shape: atomic
@@ -474,8 +481,8 @@ tests:
     verifies: [CON-03]
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_03_partitions_and_size
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
   - id: TC-BUILD-01
     name: Release image has no fault-injection path
     shape: atomic
@@ -485,8 +492,8 @@ tests:
     verifies: [FR-BUILD-01]
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_build_01_no_fault_path
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
   - id: TC-SEC-01-host
     name: No WiFi, PHY or Bluetooth stack linked
     shape: atomic
@@ -496,8 +503,8 @@ tests:
     verifies: [NFR-SEC-01]
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_sec_01_no_radio_stack
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
   - id: TC-SEC-01
     name: No BLE advertising from the DUT's addresses
     shape: atomic
@@ -507,8 +514,8 @@ tests:
     verifies: [NFR-SEC-01]
     needs: [bench-ble-scan]
     impl: tests/bench/test_radio.py::test_tc_sec_01_ble_silent
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
 
   # §11 Task watchdog — normal operation
   - id: TC-WDT-04
@@ -520,8 +527,8 @@ tests:
     verifies: [NFR-WDT-04]
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_soak.py::test_tc_wdt_04_soak_10_min
-    status: not done
-    reason: not run on the current commit
+    status: successful
+    commit: 6e091e1
 
 gates:
   load-defined: {verdict: null, date: null, commit: null}

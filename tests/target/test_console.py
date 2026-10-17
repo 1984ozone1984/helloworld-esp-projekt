@@ -1,7 +1,7 @@
 """FSD §8 Console line format — target tier (testing/test-plan.yaml)."""
 import pytest
 
-from console import BANNER, FAULT, HEARTBEAT, LED, NORMATIVE_TAG, matches
+from tests.target.console import BANNER, FAULT, HEARTBEAT, LED, NORMATIVE_TAG, matches
 
 GRAMMAR = (BANNER, HEARTBEAT, LED, FAULT)
 

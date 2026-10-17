@@ -91,8 +91,22 @@ def reset_and_capture(bench, slot, after_banner_s=0.0, timeout_s=30.0):
     return first_boot(fetch(bench, slot, t0))
 
 
-def capture_for(bench, slot, seconds):
-    """Read the console for `seconds` of host time without resetting."""
+def capture_for(bench, slot, seconds, chunk_s=60.0):
+    """Read the console for `seconds` of host time without resetting.
+
+    The bench keeps only the last 1000 lines (testing/test-plan.yaml,
+    bench-serial-monitor), about 5 minutes of this firmware's output, so a long
+    window is read in chunks and joined on the host timestamps.
+    """
     t0 = time.time()
-    time.sleep(seconds)
-    return fetch(bench, slot, t0)
+    end = t0 + seconds
+    out, since = [], t0
+    while True:
+        time.sleep(max(0.0, min(chunk_s, end - time.time())))
+        for ln in fetch(bench, slot, since):
+            if ln.ts > since and ln.ts <= end:
+                out.append(ln)
+        if out:
+            since = out[-1].ts
+        if time.time() >= end:
+            return out

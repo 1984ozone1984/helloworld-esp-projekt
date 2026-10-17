@@ -24,7 +24,14 @@ def _norm(addr):
 def test_tc_sec_01_ble_silent(bench, image):
     """TC-SEC-01 · NFR-SEC-01 (b): no BLE address within base MAC .. base+3 over 30 s."""
     dut = _derived(_base_mac())
-    seen = {_norm(d.get("address")) for d in bench.ble_scan(timeout=30)}
+    # Two 15 s scans: the bench fails a single scan longer than ~20 s
+    # (testing/test-plan.yaml, bench-ble-scan). A bench error is no observation.
+    seen = set()
+    for _ in range(2):
+        try:
+            seen |= {_norm(d.get("address")) for d in bench.ble_scan(timeout=15)}
+        except Exception as e:
+            pytest.skip(f"not done: BLE scan failed on the bench: {e}")
     # A silent result proves nothing unless the instrument saw something else.
     if not seen:
         pytest.skip("not done: no positive control (no BLE devices seen)")

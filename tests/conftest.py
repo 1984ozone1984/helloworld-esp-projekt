@@ -1,6 +1,6 @@
-"""DUT fixtures shared by the target and bench tiers: the testbench, the DUT slot, the image.
+"""DUT fixtures for the target and bench tiers: the testbench, the DUT slot, the image.
 
-Needs TestbenchDriver on PYTHONPATH (the devcontainer sets it; locally point it
+Target and bench tiers need TestbenchDriver on PYTHONPATH (the devcontainer sets it; locally point it
 at Embedded-AI-Harness/pytest at the commit pinned in .devcontainer/Dockerfile).
 """
 import os
@@ -8,9 +8,8 @@ import re
 from pathlib import Path
 
 import pytest
-from testbench_driver import TestbenchDriver
 
-PLAN = Path(__file__).resolve().parents[2] / "testing" / "test-plan.yaml"
+PLAN = Path(__file__).resolve().parents[1] / "testing" / "test-plan.yaml"
 
 
 def _plan_value(key):
@@ -23,6 +22,8 @@ def bench():
     url = os.environ.get("TESTBENCH_URL")
     if not url:
         pytest.skip("not done: TESTBENCH_URL unset")
+    # Imported here so the artefact tier (CI, no driver) can share this conftest.
+    from testbench_driver import TestbenchDriver
     with TestbenchDriver(url) as tb:
         try:
             tb.info()
@@ -32,8 +33,16 @@ def bench():
 
 
 @pytest.fixture(scope="session")
-def slot():
-    return os.environ.get("DUT_SLOT") or _plan_value("slot")
+def slot(bench):
+    """The slot holding the DUT, found by MAC; slot labels move when the bench restarts."""
+    if os.environ.get("DUT_SLOT"):
+        return os.environ["DUT_SLOT"]
+    mac = _plan_value("mac")
+    present = [s["label"] for s in bench.get_devices() if s.get("present")]
+    for label in present:
+        if bench.chip_info(label).get("mac", "").lower() == mac:
+            return label
+    pytest.skip(f"not done: no present slot reports DUT MAC {mac} (present: {present})")
 
 
 @pytest.fixture(scope="session")
@@ -77,13 +86,13 @@ def image(bench, slot, coldflash):
 @pytest.fixture(scope="session")
 def boot(bench, slot, image):
     """Console lines from one hard reset, including 11 s after the banner."""
-    from console import reset_and_capture
+    from tests.target.console import reset_and_capture
     return reset_and_capture(bench, slot, after_banner_s=11.0)
 
 
 @pytest.fixture(scope="session")
 def steady(bench, slot, boot):
     """60 s of console lines from a device already RUNNING (shared setup, P-SERIAL)."""
-    from console import capture_for
+    from tests.target.console import capture_for
     return capture_for(bench, slot, 60.0)
 
