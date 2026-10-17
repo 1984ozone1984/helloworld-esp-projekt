@@ -145,7 +145,7 @@ tests:
 
 gates:
   load-defined: {verdict: null, date: null, commit: null}
-  ai-harnessed: {verdict: null, date: null, commit: null}
+  ai-harnessed: {verdict: OPEN, date: 2026-10-17, commit: dc2e706}
   dut-ready: {verdict: null, date: null, commit: null}
   ready-for-shipment: {verdict: null, date: null, commit: null}
   shipped: {verdict: null, date: null, commit: null}
