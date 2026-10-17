@@ -30,7 +30,6 @@ def test_jrn_01_1_flash(bench, slot, coldflash):
     _done("JRN-01.1")
 
 
-@pytest.mark.xfail(reason="boot banner not implemented (FSD §5)", strict=False)
 def test_jrn_01_2_banner(bench, slot, expected_version):
     """Banner after reset: version is the image's, reset reason is non-panic."""
     _needs("JRN-01.1")

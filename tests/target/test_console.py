@@ -14,7 +14,6 @@ def test_tc_log_01_lines_on_usb_console(boot):
     assert matches(boot, LED), "no LED line"
 
 
-@pytest.mark.xfail(reason="boot banner not implemented (FSD §5)", strict=False)
 def test_tc_log_02_every_normative_line_matches(boot, steady):
     """TC-LOG-02 · FR-LOG-02 (b): every hello/led/fault line matches A.1, no escapes."""
     lines = boot + steady
