@@ -234,7 +234,7 @@ boot.
 
 | ID | Precondition · stimulus | Expected observation | Timing | Must NOT happen | Tier |
 |---|---|---|---|---|---|
-| FR-BOOT-01 | DUT running, console open (DTR/RTS low) · bench issues a hard reset | Exactly one banner line matching A.1 | ≤ 3000 ms from reset command to banner received by host | No banner; two banners for one reset; banner preceded by a panic report | target |
+| FR-BOOT-01 | DUT running, console open (DTR/RTS low) · bench issues a hard reset | Exactly one banner line matching A.1 | Banner's log timestamp ≤ 3000 ms (the ESP-IDF timestamp counts from chip reset, bootloader included) | No banner; two banners for one reset; banner preceded by a panic report | target |
 | FR-BOOT-02 | Clean checkout of tag `v0.1.0` · build, flash, reset | `version=v0.1.0` | — | `-dirty` or `-g<hash>` suffix; IDF fallback version `1` | target |
 | FR-BOOT-03 (a) | Host test · map every `esp_reset_reason_t` value, plus one out-of-range value | Each value maps to its A.2 name; out-of-range maps to `UNKNOWN` | — | Empty string; crash | host |
 | FR-BOOT-03 (b) | DUT running · bench hard reset over USB-Serial/JTAG | `reset_reason` is a non-panic reason (one of `POWERON`, `EXT`, `SW`, `USB`, `JTAG`) | — | `PANIC`, `TASK_WDT`, `INT_WDT`, `UNKNOWN` | target |
@@ -580,7 +580,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.3
+fsd_version: 0.1.4
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -594,6 +594,7 @@ change_history:
   - 2026-10-17 0.1.1 board is XIAO ESP32S3 Sense; user LED GPIO21, active-low
   - 2026-10-17 0.1.2 proposed watchdog and timing values accepted by author
   - 2026-10-17 0.1.3 LED check: FR-LED-03 to May (human acceptance), CON-05 by host test + review; no instrument can see GPIO21
+  - 2026-10-17 0.1.4 FR-BOOT-01 measured by the banner's device timestamp; bench reset latency (10-11 s, batched output) makes the host clock unusable
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)

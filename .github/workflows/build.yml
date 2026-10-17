@@ -8,7 +8,7 @@ name: Build Firmware
 #
 # The verify job has not run yet: it needs the self-hosted runner in the
 # devcontainer to be registered, a DUT slot set in the repo variable DUT_SLOT
-# (assigned by /commission), and the journey tests in tests/bench.
+# (assigned by /commission).
 
 env:
   IDF_TAG: v6.0.2          # keep in step with the container tag below
@@ -137,7 +137,8 @@ jobs:
             || { echo "not done: TESTBENCH_URL / DUT_SLOT repo variables unset"; exit 1; }
           curl -sf -m 10 "$TESTBENCH_URL/api/info" >/dev/null \
             || { echo "not done: testbench unreachable at $TESTBENCH_URL"; exit 1; }
-          pytest tests/bench -m journey -q --coldflash-dir artefact/coldflash
+          COLDFLASH_DIR=artefact/coldflash EXPECT_VERSION=${{ needs.build.outputs.version }} \
+            pytest -m journey -q
 
   release:
     if: startsWith(github.ref, 'refs/tags/')

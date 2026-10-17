@@ -57,7 +57,7 @@ always builds production, and every build greps the `.bin` for
 | Workflow | Trigger | Does |
 |---|---|---|
 | `.github/workflows/ci.yml` (host tests) | push to `main`, PR | `cmake -S tests/host -B build-host && ctest --test-dir build-host` |
-| `.github/workflows/build.yml` | push to `main`, `v*.*.*` tag, manual | Builds in `espressif/idf:v6.0.2` and uploads `out/` (bin, elf, generated sdkconfig, cold-flash set from `flash_args`). On a tag: `verify` runs the journey (`pytest tests/bench -m journey`) on the self-hosted runner, then `release` publishes |
+| `.github/workflows/build.yml` | push to `main`, `v*.*.*` tag, manual | Builds in `espressif/idf:v6.0.2` and uploads `out/` (bin, elf, generated sdkconfig, cold-flash set from `flash_args`). On a tag: `verify` runs the journey (`pytest -m journey`, image from `COLDFLASH_DIR`) on the self-hosted runner, then `release` publishes |
 
 The `verify` job reads the repository variables `TESTBENCH_URL` and `DUT_SLOT`.
 The journey needs no person, so a tag can be verified unattended.
