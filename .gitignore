@@ -1,0 +1,5 @@
+.fuse_hidden*
+build/
+managed_components/
+sdkconfig
+sdkconfig.old
