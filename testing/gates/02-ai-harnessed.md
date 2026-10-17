@@ -24,10 +24,11 @@
 ```bash
 test -f testing/test-plan.yaml && test -f testing/debugging-agenda.md
 ls .github/workflows/build.yml .github/workflows/ci.yml
+test -n "$(git ls-files .claude/skills/build/SKILL.md)"
 grep -q 'runs-on: \[self-hosted, testbench\]' .github/workflows/build.yml
 grep -A2 '^  release:' .github/workflows/build.yml | grep -q verify
 gh run list -L 5 --branch main --json name,conclusion   # both workflows success at least once
-grep -rnE 'esp_wifi|esp_bt|nimble|udp_log|esp_ota|nvs_flash|esp_http|mqtt' main components 2>/dev/null && exit 1
+grep -rnE 'esp_wifi|esp_bt|nimble|udp_log|esp_ota|nvs_flash|esp_http|mqtt' main $(ls -d components 2>/dev/null) && exit 1
 grep -q 'Init complete' main/app_main.c
 ```
 
@@ -40,4 +41,5 @@ grep -q 'Init complete' main/app_main.c
 
 - Harness's "UDP logging always" conflicts with this FSD's no-radio non-goal. Its absence is correct here; its presence is the finding.
 - JRN-01.5 needs an operator, so the tag-triggered verify job needs a person at the bench. Check that this is stated rather than discovered.
+- A `.gitignore` pattern for firmware output (`build/`) that also swallows `.claude/skills/build/`. Check `git ls-files .claude/skills/build` is non-empty.
 - `tests/host` holds only a tier-runs smoke test. A host test asserting product behaviour belongs to /build's waves, not Phase 1.
