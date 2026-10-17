@@ -6,7 +6,6 @@ from console import BANNER, FAULT, HEARTBEAT, LED, NORMATIVE_TAG, matches
 GRAMMAR = (BANNER, HEARTBEAT, LED, FAULT)
 
 
-@pytest.mark.xfail(reason="heartbeat and blinker not implemented (FSD §6, §7)", strict=False)
 def test_tc_log_01_lines_on_usb_console(boot):
     """TC-LOG-01 · FR-LOG-01: banner, heartbeat and LED lines all arrive on the USB console."""
     assert matches(boot, BANNER), "no banner"

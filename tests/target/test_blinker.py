@@ -3,9 +3,6 @@ import pytest
 
 from console import LED, matches
 
-pytestmark = pytest.mark.xfail(reason="blinker not implemented (FSD §7)", strict=False)
-
-
 def _leds(lines):
     return [(int(m.group(1)), m.group(2)) for _, m in matches(lines, LED)]
 

@@ -45,7 +45,6 @@ def test_jrn_01_2_banner(bench, slot, expected_version):
     _done("JRN-01.2")
 
 
-@pytest.mark.xfail(reason="heartbeat not implemented (FSD §6)", strict=False)
 def test_jrn_01_3_heartbeat(bench, slot):
     """Heartbeat n=1,2,3 within 3.5 s of the banner, 950–1050 ms apart."""
     _needs("JRN-01.2")
@@ -59,7 +58,6 @@ def test_jrn_01_3_heartbeat(bench, slot):
     _done("JRN-01.3")
 
 
-@pytest.mark.xfail(reason="blinker not implemented (FSD §7)", strict=False)
 def test_jrn_01_4_led(bench, slot):
     """LED lines on/off/on/off within 2.5 s of the banner, 450–550 ms apart."""
     _needs("JRN-01.3")
