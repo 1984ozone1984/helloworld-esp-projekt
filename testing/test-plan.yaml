@@ -13,10 +13,24 @@ dut:
   board: Seeed XIAO ESP32S3 Sense
   chip: esp32s3
   flash: 8MB
-  slot: null              # assigned by /commission
+  slot: SLOT1
+  observed:               # /commission, 2026-10-17, POST /api/chip/info
+    date: 2026-10-17
+    chip: ESP32-S3 (QFN56)
+    revision: v0.2
+    flash_size: 8MB       # matches FSD CON-02
+    psram: Embedded PSRAM 8MB (AP_3v3)
+    usb_mode: USB-Serial/JTAG
+    mac: "30:30:f9:34:72:28"   # tests verify the DUT by this, not by slot label
 testbench:
-  url: http://192.168.8.70:8080
+  # Dated observation, not an address to hard-code: tests take TESTBENCH_URL
+  # from the environment and select the DUT by MAC.
   hostname: testbench-de09
+  last_seen_ip: 192.168.8.70
+  url: http://192.168.8.70:8080
+  portal_version: not reported   # /api/info has no version field
+  last_seen: 2026-10-17
+  slots_configured: 4
 
 capabilities:
   # --- Bench capabilities: declared by the testbench (Harness-FSD, Appendix D)
@@ -50,16 +64,40 @@ capabilities:
   # testing/debugging-agenda.md; /commission flips it to yes.
   dut-on-slot:
     what: The XIAO ESP32S3 Sense enumerates on a bench slot as an ESP32-S3 with 8 MB flash and accepts a flash
-    available: unproven
+    available: yes
+    observed: >-
+      2026-10-17. SLOT1, ESP32-S3 rev v0.2, 8 MB flash, MAC 30:30:f9:34:72:28.
+      Forward path: CI run 39057559541 (commit c2761e2), artefact
+      firmware-c2761e2, flashed via /api/flash at the offsets in its
+      flash_args (0x0 bootloader.bin, 0x8000 partition-table.bin,
+      0x10000 helloworld-esp.bin), hash verified; marker "main: ON" / "main: OFF"
+      observed every 1000 ms.
+    consequence: /api/serial/monitor matches its pattern as a literal substring, not a regex
   dut-console-after-reset:
     what: The first console line after a bench reset reaches the bench despite native-USB re-enumeration
-    available: unproven
+    available: yes
+    observed: >-
+      2026-10-17. 5 of 5 bench resets (POST /api/serial/reset): "Init complete" captured
+      in the reset/monitor/buffer output, followed by "main: ON".
+    consequence: >-
+      A bench reset appears as ROM rst:0x15 (USB_UART_CHIP_RESET), so expect
+      reset_reason=USB in the banner (allowed by FR-BOOT-03 (b)). Read the boot
+      line from the reset response plus /api/serial/output, not from a monitor
+      opened afterwards.
   dut-user-led:
-    what: GPIO21 low lights the orange user LED, GPIO21 high turns it off
-    available: unproven
+    what: An instrument observes the orange user LED on GPIO21
+    available: no
+    consequence: >-
+      GPIO21 is not on the XIAO header, so no bench instrument can see it. By the
+      owner's decision (FSD 0.1.3), FR-LED-03 is a May with human acceptance and
+      CON-05 is verified by host test and review. No automated test may need this.
   operator:
     what: A person at the bench answers operator prompts during a run
-    available: unproven
+    available: yes
+    observed: >-
+      2026-10-17. POST /api/human-interaction answered Done -> confirmed:true and
+      Cancel -> confirmed:false. Both answers reach the caller.
+    consequence: For physical acts only (plug, power, swap), never for observations
 
   # --- Project infrastructure
   host-toolchain:
@@ -140,8 +178,11 @@ tests:
     needs: [bench-operator-prompt, operator, dut-user-led]
     observable: operator answers yes to "Is the orange user LED blinking? (ignore the red charge LED)"
     impl: ""
-    status: not done
-    reason: test not written
+    status: deprecated
+    reason: >-
+      An observation by eye is not an instrument. FR-LED-03 became a May with human
+      acceptance and CON-05 is verified by host test and review (FSD 0.1.3), so the
+      journey ends at JRN-01.4.
 
 gates:
   load-defined: {verdict: null, date: null, commit: null}

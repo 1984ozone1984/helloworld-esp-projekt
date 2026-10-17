@@ -60,8 +60,7 @@ always builds production, and every build greps the `.bin` for
 | `.github/workflows/build.yml` | push to `main`, `v*.*.*` tag, manual | Builds in `espressif/idf:v6.0.2` and uploads `out/` (bin, elf, generated sdkconfig, cold-flash set from `flash_args`). On a tag: `verify` runs the journey (`pytest tests/bench -m journey`) on the self-hosted runner, then `release` publishes |
 
 The `verify` job reads the repository variables `TESTBENCH_URL` and `DUT_SLOT`.
-JRN-01.5 asks an operator, so a person must be at the bench when a tag is
-pushed.
+The journey needs no person, so a tag can be verified unattended.
 
 ## Devcontainer and runner
 

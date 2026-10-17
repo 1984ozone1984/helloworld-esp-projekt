@@ -43,7 +43,7 @@ Nothing flows into the device after flashing.
 ```text
  ESP32-S3 DUT ──USB-Serial/JTAG (log lines)──▶ testbench / host
      │
-     └──GPIO21 (active-low)──▶ onboard user LED ──light──▶ operator
+     └──GPIO21 (active-low)──▶ onboard user LED ──light──▶ person
 ```
 
 ### 2.2 Hardware / Platform Architecture
@@ -72,7 +72,8 @@ from a default:
 | CON-02 | Release artefact · `esptool.py image_info`; DUT · `esptool.py flash_id` | Image header flash size 8 MB; DUT reports ≥ 8 MB | Header size ≠ 8 MB | target |
 | CON-03 | Release artefact · read partition table and app size | Table matches the offsets/sizes above; app ≤ 1 048 576 bytes | Extra or moved partitions; app > 1 MB | host |
 | CON-04 | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | Banner only on UART0 | target |
-| CON-05 | DUT RUNNING · operator prompt "Is the orange user LED blinking? (ignore the red charge LED)" | Operator answers yes | Only the charge LED changes; user LED dark or steady | bench |
+| CON-05 (a) | Host test · LED driver pure core maps `on` and `off` to pin levels | `on` → 0, `off` → 1 | `on` → 1 | host |
+| CON-05 (b) | Review of the LED driver source | GPIO21 configured as push-pull output and driven high before the first blink | Any other pin; open-drain; LED lit before the first blink | other |
 
 ### 2.3 Software Architecture
 
@@ -179,7 +180,7 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
 - **Scope:** blinker and LED driver, Task Watchdog and fault-injection build,
   version from git tag, release-image hygiene, radio silence.
 - **Deliverables:** firmware meeting CON-05; fault-injection image variant;
-  tag `v0.1.0`; bench-tier operator check of the LED.
+  tag `v0.1.0`; human acceptance of the physical blink (FR-LED-03).
 - **Exit criteria:** FR-LED-01…FR-LED-03, FR-WDT-01…NFR-WDT-05, FR-BOOT-02,
   FR-BUILD-01, NFR-SEC-01 pass.
 - **Depends on:** Phase 1. Every Phase-2 observation is made through the console
@@ -193,7 +194,8 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
 | Opening the console with DTR or RTS asserted halts the chip (download mode / held in reset), reading as a firmware hang | High | Medium | Every observer opens the port with both lines low — Method `standards/testing.md` P-SERIAL |
 | The USB-Serial/JTAG console blocks when no host reads, starving a watchdog-subscribed task | Medium | High | NFR-WDT-05 makes the behaviour normative and tested |
 | GPIO21 is also the microSD chip select on the Sense expansion board; a card in the slot sees CS toggle at 1 Hz | Low | Low | The microSD slot is out of scope and stays empty |
-| The LED polarity is wrong (lit when it should be dark) | Low | Low | Invisible to the operator check, which judges blinking only; polarity is fixed by CON-05 and reviewed in the LED driver's host test |
+| The LED polarity is wrong (lit when it should be dark) | Low | Low | Polarity is fixed by CON-05 and checked by the LED driver's host test; the human acceptance of FR-LED-03 judges blinking only |
+| No instrument observes the physical LED: GPIO21 is not on the XIAO header | Certain | Low | Accepted. FR-LED-03 is a May with a human acceptance step; CON-05 is verified by host test and review, not on hardware |
 
 **Assumptions**
 - The DUT is a XIAO ESP32S3 Sense with its user LED on GPIO21 `[user]`.
@@ -204,7 +206,7 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
 **Dependencies**
 - ESP-IDF v6.0.2 (`espressif/idf:v6.0.2`).
 - The Embedded AI Harness testbench: serial monitor, hard reset, WiFi and BLE
-  scan, operator prompt.
+  scan.
 
 **Explicitly out of scope** (considered and declined)
 - WiFi connection, OTA updates `[user]` — the minimal scope was chosen over both.
@@ -275,17 +277,19 @@ the console so the blink is observable without a light sensor.
   LED lines (Appendix A.1).
 - **FR-LED-02** [Must] `[derived]`: Consecutive LED lines shall alternate between
   `state=on` and `state=off`.
-- **FR-LED-03** [Should] `[user]`: The physical LED shall be lit during `on`
-  phases and dark during `off` phases, as judged by an operator.
+- **FR-LED-03** [May] `[user]`: The physical LED shall be lit during `on`
+  phases and dark during `off` phases, as judged by a person (human-judgement
+  acceptance, never a rig).
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-LED-01 | DUT RUNNING ≥ 5 s · capture 40 consecutive LED lines | Every interval within 450–550 ms | Any interval outside the band | target |
 | FR-LED-02 (a) | Host test · apply the toggle function 4 times from `off` | on, off, on, off | Two consecutive equal states | host |
 | FR-LED-02 (b) | Same capture as FR-LED-01 | Strict alternation | Two consecutive equal states | target |
-| FR-LED-03 | DUT RUNNING · operator prompt "Is the LED blinking about once per second?" (yes/no) | Operator answers yes within 30 s | LED steadily lit or dark; answer "no" | bench |
+| FR-LED-03 | DUT RUNNING · a person looks at the board | They confirm the orange user LED (not the red charge LED) blinks about once per second | LED steadily lit or dark | other (human acceptance) |
 
-FR-LED-03 is a human-judgement acceptance step: the operator is the sensor.
+FR-LED-03 is a human-judgement acceptance step. No testbench instrument can
+observe GPIO21, so it is never part of an automated run or the journey.
 
 # Part B — Interfaces (L1)
 
@@ -319,7 +323,7 @@ GPIO21 (CON-05). The peer is the LED itself.
 **Mapping.** `on` → GPIO21 low. `off` → GPIO21 high. The pin is configured as
 an output, driven high (LED dark), before the first blink.
 
-**Requirements.** None of its own; verified transitively through FR-LED-03.
+**Requirements.** None of its own. The pin and polarity are CON-05.
 
 # Part C — Foundation (L0)
 
@@ -526,8 +530,8 @@ Step-by-step procedures: [`../UserDocumentation/User-Manual.md`](../UserDocument
 |---|---|---|
 | **host** | Dev machine, plain compiler; release artefacts | Pure formatters (banner, heartbeat, LED lines), reset-reason name mapping, heartbeat counter, toggle function; artefact checks CON-01, CON-03, FR-BUILD-01 |
 | **target** | DUT on the testbench, console over USB-Serial/JTAG | Timing, alternation, banner content, watchdog reset and recovery, console-closed behaviour |
-| **bench** | DUT + real peers (operator, WiFi/BLE scanner) | FR-LED-03, NFR-SEC-01, CON-05 |
-| **other** | Review only | LIFE-T3, LIFE-T7 |
+| **bench** | DUT + real peers (WiFi/BLE scanner) | NFR-SEC-01 |
+| **other** | Review or human acceptance | LIFE-T3, LIFE-T7, CON-05 (b), FR-LED-03 |
 
 Layer mapping: L2 components are tested on the host tier as pure functions and
 on the target tier for timing. The L1 console format has its pure core on the
@@ -543,7 +547,7 @@ contracts.
 
 Phase 2 exit: on a fresh flash of the `v0.1.0` release image, a 10-minute
 target run (NFR-WDT-04) passes alongside the FR-HB-01 and FR-LED-01 checks, the
-fault-injection runs (FR-WDT-01…03) pass for both tasks, and the operator
+fault-injection runs (FR-WDT-01…03) pass for both tasks, and a person
 confirms the blink (FR-LED-03).
 
 ### 16.2 Traceability
@@ -576,7 +580,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.2
+fsd_version: 0.1.3
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -589,6 +593,7 @@ change_history:
   - 2026-10-17 0.1.0 initial baseline
   - 2026-10-17 0.1.1 board is XIAO ESP32S3 Sense; user LED GPIO21, active-low
   - 2026-10-17 0.1.2 proposed watchdog and timing values accepted by author
+  - 2026-10-17 0.1.3 LED check: FR-LED-03 to May (human acceptance), CON-05 by host test + review; no instrument can see GPIO21
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)

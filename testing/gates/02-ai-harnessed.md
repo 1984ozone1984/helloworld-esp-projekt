@@ -40,6 +40,5 @@ grep -q 'Init complete' main/app_main.c
 ## Traps
 
 - Harness's "UDP logging always" conflicts with this FSD's no-radio non-goal. Its absence is correct here; its presence is the finding.
-- JRN-01.5 needs an operator, so the tag-triggered verify job needs a person at the bench. Check that this is stated rather than discovered.
 - A `.gitignore` pattern for firmware output (`build/`) that also swallows `.claude/skills/build/`. Check `git ls-files .claude/skills/build` is non-empty.
 - `tests/host` holds only a tier-runs smoke test. A host test asserting product behaviour belongs to /build's waves, not Phase 1.

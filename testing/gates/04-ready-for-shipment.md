@@ -31,4 +31,4 @@ ctest --test-dir build-host --output-on-failure
 ## Traps
 
 - A test marked successful against an earlier commit than the shipped one.
-- FR-LED-03 passed with nobody at the bench (the prompt timed out and was read as yes).
+- FR-LED-03 is a May with human acceptance: check that its acceptance is recorded with a date and the commit it saw, not inferred from the LED log lines.
