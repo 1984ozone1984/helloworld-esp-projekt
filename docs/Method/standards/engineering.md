@@ -17,7 +17,8 @@ Project-agnostic build rules. Each is a single present-state rule.
   reach it.
 - **Verification before commit** — the firmware builds (`idf.py build` in the
   pinned container, see [`../project/build.md`](../project/build.md)) and the
-  host-tier tests pass.
+  host-tier tests pass
+  (`cmake -S tests/host -B build-host && cmake --build build-host && ctest --test-dir build-host`).
 - **Errors fail loudly** — actionable messages, no silent catches, no swallowed
   return codes. Every `esp_err_t` is checked; an ignored error is a defect even
   when nothing breaks yet.

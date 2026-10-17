@@ -26,10 +26,14 @@ CONFIG_ESP_TASK_WDT_PANIC=y
 CONFIG_SPIRAM=n
 ```
 
-The fault-injection variant adds `sdkconfig.fault.defaults`
+Two fault-injection variants exist, `fault-heartbeat` and `fault-blink`. Each
+is selected by its own `sdkconfig.<variant>.defaults`
 (`CONFIG_HELLO_FAULT_STALL_TASK_HEARTBEAT=y` or `..._BLINK=y`) through
-`SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.fault.defaults"` and builds
-into its own build directory. Release images never use it (FSD FR-BUILD-01).
+`SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.<variant>.defaults"`, and
+builds into its own build directory. Release images never use them (FSD
+FR-BUILD-01). CI builds a variant only from a manual `workflow_dispatch`. A tag
+always builds production, and every build greps the `.bin` for
+`fault: stalling` in both directions.
 
 ## Managed components
 
@@ -47,3 +51,24 @@ into its own build directory. Release images never use it (FSD FR-BUILD-01).
   `git describe --always --tags --dirty` (FSD FR-BOOT-02). Do not set
   `PROJECT_VER` by hand.
 - Releases are annotated tags `vMAJOR.MINOR.PATCH`, built from a clean checkout.
+
+## CI
+
+| Workflow | Trigger | Does |
+|---|---|---|
+| `.github/workflows/ci.yml` (host tests) | push to `main`, PR | `cmake -S tests/host -B build-host && ctest --test-dir build-host` |
+| `.github/workflows/build.yml` | push to `main`, `v*.*.*` tag, manual | Builds in `espressif/idf:v6.0.2` and uploads `out/` (bin, elf, generated sdkconfig, cold-flash set from `flash_args`). On a tag: `verify` runs the journey (`pytest tests/bench -m journey`) on the self-hosted runner, then `release` publishes |
+
+The `verify` job reads the repository variables `TESTBENCH_URL` and `DUT_SLOT`.
+JRN-01.5 asks an operator, so a person must be at the bench when a tag is
+pushed.
+
+## Devcontainer and runner
+
+`.devcontainer/` builds on `espressif/idf:v6.0.2` and adds pytest, the
+`TestbenchDriver` (harness repo pinned by `HARNESS_REF`) and the GitHub Actions
+runner. The runner is installed but stays idle until the owner runs
+`.devcontainer/runner/register.sh`. After that it registers per-repo,
+ephemeral, with labels `self-hosted,testbench`, in a restart loop. It needs
+`GH_RUNNER_PAT`, a fine-grained token for this repository with Administration
+read/write, passed in from the owner's host environment.

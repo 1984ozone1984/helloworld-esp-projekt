@@ -1,0 +1,160 @@
+name: Build Firmware
+
+# Builds on every push to main; on a v*.*.* tag, the journey runs against the
+# built bytes on the testbench before anything is published.
+#
+# The image version is ESP-IDF's PROJECT_VER from `git describe` (FSD
+# FR-BOOT-02), so PROJECT_VER is never passed and the checkout keeps tags.
+#
+# The verify job has not run yet: it needs the self-hosted runner in the
+# devcontainer to be registered, a DUT slot set in the repo variable DUT_SLOT
+# (assigned by /commission), and the journey tests in tests/bench.
+
+env:
+  IDF_TAG: v6.0.2          # keep in step with the container tag below
+  APP: helloworld-esp
+  MULTI_VARIANT: 'true'
+  VARIANT_MARKER: 'fault: stalling'   # FSD FR-BUILD-01: only fault images contain it
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'Which firmware to build'
+        type: choice
+        # fault-* need components/fault_inject and sdkconfig.<variant>.defaults,
+        # which arrive with FSD Phase 2; until then those builds fail loudly.
+        options: [production, fault-heartbeat, fault-blink]
+        default: production
+
+permissions:
+  contents: write          # required to create the release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v6.0.2
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+
+    steps:
+      # Must come first: the container runs as root while the workspace belongs
+      # to the runner user, and git refuses with "detected dubious ownership".
+      - name: Trust the workspace
+        run: git config --global --add safe.directory '*'
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # git describe needs the tags
+
+      - name: Show the IDF version actually used
+        run: . $IDF_PATH/export.sh >/dev/null && idf.py --version
+
+      - name: Decide what to build
+        id: plan
+        run: |
+          VARIANT="${{ github.event.inputs.variant || 'production' }}"
+          [ "$MULTI_VARIANT" = "true" ] || VARIANT=production
+          # A tag is always production.
+          [[ "$GITHUB_REF" == refs/tags/v* ]] && VARIANT=production
+
+          VERSION=$(git describe --always --tags --dirty)
+          DEFAULTS="sdkconfig.defaults"
+          if [ "$VARIANT" != "production" ]; then
+            DEFAULTS="sdkconfig.defaults;sdkconfig.$VARIANT.defaults"
+          fi
+          ARTEFACT="$VERSION"
+          [ "$VARIANT" = "production" ] || ARTEFACT="$VERSION-$VARIANT"
+
+          { echo "variant=$VARIANT"; echo "version=$VERSION"
+            echo "artefact=$ARTEFACT"; echo "defaults=$DEFAULTS"; } >> $GITHUB_OUTPUT
+          echo "Building the $VARIANT firmware, version $VERSION"
+
+      # -DSDKCONFIG keeps the generated config in the build dir, so a stale
+      # root sdkconfig can never outrank the defaults files.
+      - name: Build firmware
+        run: |
+          . $IDF_PATH/export.sh >/dev/null
+          ARGS="-B build -DSDKCONFIG=$PWD/build/sdkconfig \
+                -DSDKCONFIG_DEFAULTS=${{ steps.plan.outputs.defaults }}"
+          idf.py $ARGS set-target esp32s3
+          idf.py $ARGS build
+
+      - name: Verify the image matches the variant asked for
+        if: env.MULTI_VARIANT == 'true'
+        run: |
+          grep -q "$VARIANT_MARKER" build/$APP.bin && FOUND=yes || FOUND=no
+          WANT=no; [ "${{ steps.plan.outputs.variant }}" = "production" ] || WANT=yes
+          if [ "$FOUND" != "$WANT" ]; then
+            echo "FATAL: ${{ steps.plan.outputs.variant }} image, marker found=$FOUND, expected=$WANT"
+            exit 1
+          fi
+          echo "verified: ${{ steps.plan.outputs.variant }} image, marker $FOUND"
+
+      - name: Collect artefacts
+        run: |
+          A="${{ steps.plan.outputs.artefact }}"
+          mkdir -p out/coldflash
+          cp build/$APP.bin out/firmware_${A}.bin
+          cp build/$APP.elf out/firmware_${A}.elf
+          cp build/sdkconfig out/sdkconfig.generated
+          # Cold-flash set taken from flash_args, never a hand-written list.
+          cp build/flash_args out/coldflash/
+          awk '$1 ~ /^0x/ {print $2}' build/flash_args | while read -r f; do
+            cp "build/$f" out/coldflash/ || { echo "FATAL: missing build/$f"; exit 1; }
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ steps.plan.outputs.artefact }}
+          path: out/
+
+  verify:
+    # The journey on the exact bytes that would be published. Red => no release.
+    # An unreachable bench is an unmet precondition: the job fails, nothing
+    # publishes; power the bench and re-run.
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: [self-hosted, testbench]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-${{ needs.build.outputs.version }}
+          path: artefact/
+      - name: Run the journey against the release candidate
+        env:
+          TESTBENCH_URL: ${{ vars.TESTBENCH_URL }}
+          DUT_SLOT: ${{ vars.DUT_SLOT }}
+        run: |
+          test -n "$TESTBENCH_URL" && test -n "$DUT_SLOT" \
+            || { echo "not done: TESTBENCH_URL / DUT_SLOT repo variables unset"; exit 1; }
+          curl -sf -m 10 "$TESTBENCH_URL/api/info" >/dev/null \
+            || { echo "not done: testbench unreachable at $TESTBENCH_URL"; exit 1; }
+          pytest tests/bench -m journey -q --coldflash-dir artefact/coldflash
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-${{ needs.build.outputs.version }}
+          path: artefact/
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artefact/firmware_*.bin
+            artefact/firmware_*.elf
+            artefact/sdkconfig.generated
+            artefact/coldflash/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

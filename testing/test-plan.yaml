@@ -1,0 +1,151 @@
+# helloworld-esp — test plan. Owned by /build.
+#
+# Every test, what it needs, and what it last produced. Status is written by
+# whatever ran the test, never by hand: not done | successful | failed, with
+# the commit it ran against. "Blocked" is computed from `needs` against
+# `capabilities`, never typed.
+#
+# Contract: docs/Functionality/FSD.md · Rules: docs/Method/standards/testing.md
+
+project: helloworld-esp
+fsd: docs/Functionality/FSD.md
+dut:
+  board: Seeed XIAO ESP32S3 Sense
+  chip: esp32s3
+  flash: 8MB
+  slot: null              # assigned by /commission
+testbench:
+  url: http://192.168.8.70:8080
+  hostname: testbench-de09
+
+capabilities:
+  # --- Bench capabilities: declared by the testbench (Harness-FSD, Appendix D)
+  # and taken at face value; a project never proves them.
+  bench-flash:
+    what: Flash images at explicit offsets through POST /api/flash
+    available: yes
+  bench-serial-monitor:
+    what: Capture DUT console lines with pattern match and a recorded buffer (/api/serial/monitor, /api/serial/output)
+    available: yes
+  bench-serial-reset:
+    what: Hard-reset the DUT through POST /api/serial/reset
+    available: yes
+  bench-serial-port-control:
+    what: Release and re-acquire the DUT serial port, so the console can be left unread (/api/serial/release)
+    available: yes
+  bench-wifi-scan:
+    what: WiFi scan from the bench radio (GET /api/wifi/scan)
+    available: yes
+  bench-ble-scan:
+    what: BLE advertisement scan (POST /api/ble/scan)
+    available: yes
+  bench-operator-prompt:
+    what: Block on an operator yes/no answered in the portal UI (POST /api/human-interaction)
+    available: yes
+  bench-test-progress:
+    what: Live test-session progress on the portal (/api/test/update)
+    available: yes
+
+  # --- Project-side: unproven until observed working here. Each is an item on
+  # testing/debugging-agenda.md; /commission flips it to yes.
+  dut-on-slot:
+    what: The XIAO ESP32S3 Sense enumerates on a bench slot as an ESP32-S3 with 8 MB flash and accepts a flash
+    available: unproven
+  dut-console-after-reset:
+    what: The first console line after a bench reset reaches the bench despite native-USB re-enumeration
+    available: unproven
+  dut-user-led:
+    what: GPIO21 low lights the orange user LED, GPIO21 high turns it off
+    available: unproven
+  operator:
+    what: A person at the bench answers operator prompts during a run
+    available: unproven
+
+  # --- Project infrastructure
+  host-toolchain:
+    what: Host C compiler + CMake/CTest for tests/host, in CI (ci.yml) and the devcontainer
+    available: yes
+  fault-injection-image:
+    what: Firmware variants fault-heartbeat / fault-blink that stall a task after 10 s (FSD §11)
+    available: no        # arrives with FSD Phase 2; blocks FR-WDT-01..03 until built
+  release-verification:
+    what: Tag-triggered journey run against the release artefact (build.yml verify job)
+    available: yes       # the container runs 24/7; an absent bench at verify time is an unmet precondition (not done)
+
+# ---------------------------------------------------------------------------
+# Journey — the standard run, one test per step, in order (Wave 1 gate).
+# Every hardware session runs behind it: while it fails, later results are
+# unreadable.
+tests:
+  - id: JRN-01.1
+    name: Flash the release image
+    shape: workflow
+    kind: standard
+    wave: 1
+    phase: 1
+    tier: target
+    verifies: [CON-01, CON-02, CON-03]
+    needs: [bench-flash, dut-on-slot]
+    observable: /api/flash returns ok for every image in coldflash/flash_args
+    impl: ""
+    status: not done
+    reason: test not written
+  - id: JRN-01.2
+    name: Banner after reset
+    shape: workflow
+    kind: standard
+    wave: 1
+    phase: 1
+    tier: target
+    verifies: [FR-BOOT-01, FR-BOOT-02, FR-BOOT-03, CON-04]
+    needs: [bench-serial-reset, bench-serial-monitor, dut-console-after-reset]
+    observable: banner matching FSD A.1 within 3 s; version equals the flashed image's; reset_reason non-panic
+    impl: ""
+    status: not done
+    reason: test not written
+  - id: JRN-01.3
+    name: Heartbeat running
+    shape: workflow
+    kind: standard
+    wave: 1
+    phase: 1
+    tier: target
+    verifies: [FR-HB-01, FR-HB-02]
+    needs: [bench-serial-monitor, dut-console-after-reset]
+    observable: heartbeat n=1, 2, 3 within 3.5 s of the banner, spaced 950–1050 ms
+    impl: ""
+    status: not done
+    reason: test not written
+  - id: JRN-01.4
+    name: LED toggling
+    shape: workflow
+    kind: standard
+    wave: 1
+    phase: 2
+    tier: target
+    verifies: [FR-LED-01, FR-LED-02]
+    needs: [bench-serial-monitor]
+    observable: led lines on/off/on/off within 2.5 s, spaced 450–550 ms
+    impl: ""
+    status: not done
+    reason: test not written
+  - id: JRN-01.5
+    name: Operator sees the blink
+    shape: workflow
+    kind: standard
+    wave: 1
+    phase: 2
+    tier: bench
+    verifies: [FR-LED-03, CON-05]
+    needs: [bench-operator-prompt, operator, dut-user-led]
+    observable: operator answers yes to "Is the orange user LED blinking? (ignore the red charge LED)"
+    impl: ""
+    status: not done
+    reason: test not written
+
+gates:
+  load-defined: {verdict: null, date: null, commit: null}
+  ai-harnessed: {verdict: null, date: null, commit: null}
+  dut-ready: {verdict: null, date: null, commit: null}
+  ready-for-shipment: {verdict: null, date: null, commit: null}
+  shipped: {verdict: null, date: null, commit: null}
