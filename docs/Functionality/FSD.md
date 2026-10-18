@@ -49,7 +49,7 @@ Nothing flows into the device after flashing.
 ### 2.2 Hardware / Platform Architecture
 
 **Board** `[user]`: Seeed Studio **XIAO ESP32S3 Sense** (ESP32-S3R8, 8 MB
-flash, 8 MB octal PSRAM), with its camera/microphone/microSD expansion board.
+flash, 8 MB octal PSRAM, which this firmware does not use — CON-06), with its camera/microphone/microSD expansion board.
 Powered and observed through its single USB-C port, which is the native
 USB-Serial/JTAG controller. The onboard user LED is on GPIO21 and is
 active-low: driving the pin low lights it `[derived]` from the board
@@ -65,15 +65,22 @@ from a default:
 | CON-03 [Must] | The partition table shall be the single-factory-app layout: `nvs` at 0x9000 (24 KB), `phy_init` at 0xF000 (4 KB), `factory` at 0x10000 (1 MB). The application image shall not exceed 1 MB. | `[derived]` from the no-OTA non-goal |
 | CON-04 [Must] | The primary console shall be the USB-Serial/JTAG controller. | `[user]` |
 | CON-05 [Must] | The LED shall be the onboard user LED on **GPIO21**, driven as a push-pull output, with low = lit. | `[user]` pin · `[derived]` polarity |
+| CON-06 [Must] | PSRAM shall not be enabled; the firmware uses internal RAM only. | `[user]` |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | CON-01 | Release artefact · `esptool.py image_info` and app-description dump | Chip ID ESP32-S3; `idf_ver` begins `v6.0.2` | Any other chip ID or IDF version | host |
-| CON-02 | Release artefact · `esptool.py image_info`; DUT · `esptool.py flash_id` | Image header flash size 8 MB; DUT reports ≥ 8 MB | Header size ≠ 8 MB | target |
+| CON-02 | Release artefact · `esptool.py image_info`; DUT · `esptool.py flash_id` | Image header flash size 8 MB; DUT reports ≥ 8 MB | Header size ≠ 8 MB; DUT reports < 8 MB | target |
 | CON-03 | Release artefact · read partition table and app size | Table matches the offsets/sizes above; app ≤ 1 048 576 bytes | Extra or moved partitions; app > 1 MB | host |
 | CON-04 | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | Banner only on UART0 | target |
 | CON-05 (a) | Host test · LED driver pure core maps `on` and `off` to pin levels | `on` → 0, `off` → 1 | `on` → 1 | host |
 | CON-05 (b) | Review of the LED driver source | GPIO21 configured as push-pull output and driven high before the first blink | Any other pin; open-drain; LED lit before the first blink | other |
+| CON-06 | Release artefact · read the generated `sdkconfig` | `CONFIG_SPIRAM` is not set | `CONFIG_SPIRAM=y` | host |
+
+Two further values the build reads are normative in their own chapters: the
+TWDT timeout of **5 s** with panic on timeout (FR-WDT-01, `CONFIG_ESP_TASK_WDT_TIMEOUT_S`)
+and fault injection **`none`** in release images (FR-BUILD-01,
+`CONFIG_HELLO_FAULT_STALL_TASK`).
 
 ### 2.3 Software Architecture
 
@@ -100,15 +107,18 @@ loses to it on disagreement.
 | LIFE-T4 | RUNNING | Blink period elapsed | — | RUNNING | Toggle LED; emit LED line | 500 ms | FR-LED-01 |
 | LIFE-T5 | RUNNING | Heartbeat period elapsed | — | RUNNING | Emit heartbeat line | 1000 ms | FR-HB-01 |
 | LIFE-T6 | RUNNING | TWDT timeout | — | PANIC | Print panic report naming the starved task | 5 s | FR-WDT-01 |
-| LIFE-T7 | RUNNING | CPU exception or `abort()` | — | PANIC | Print panic report with backtrace | — | review only (tier other) |
+| LIFE-T7 | BOOTING, RUNNING | CPU exception or `abort()` | — | PANIC | Print panic report with backtrace | — | review only (tier other) |
 | LIFE-T8 | PANIC | Panic report complete | — | BOOTING | System reset | ≤ 1 s | FR-WDT-01, FR-WDT-03 |
 | LIFE-T9 | any | Host opens or closes the console port | — | unchanged | Ignored | — | NFR-WDT-05 |
+| LIFE-T10 | PANIC | CPU exception or watchdog while the panic handler runs | — | BOOTING | Chip reset without completing the report (ESP-IDF panic re-entry) | — | review only (tier other) |
 
 **Completeness.** The firmware has no inputs other than its own timers, the
-TWDT, CPU exceptions, reset, and the console port's open/close. Every other
-(state × event) pair is impossible by construction. A timer event in BOOTING or
-PANIC is impossible because the timers are started at LIFE-T2 and stop with the
-scheduler.
+TWDT, CPU exceptions, reset, and the console port's open/close. A CPU exception
+or `abort()` is possible in every state: LIFE-T7 covers BOOTING and RUNNING,
+LIFE-T10 covers PANIC. Every other (state × event) pair is impossible by
+construction. A timer event in BOOTING or PANIC is impossible because the timers
+are started at LIFE-T2 and stop with the scheduler; a TWDT timeout in BOOTING is
+impossible because no task subscribes to the TWDT before LIFE-T2.
 
 **Prohibited transitions.** RUNNING → BOOTING without passing through PANIC or an
 external reset (a silent reboot). PANIC → RUNNING without a reset.
@@ -117,10 +127,10 @@ external reset (a silent reboot). PANIC → RUNNING without a reset.
 stateDiagram-v2
   [*] --> BOOTING: reset released
   BOOTING --> RUNNING: init complete / banner
-  BOOTING --> PANIC: init error
+  BOOTING --> PANIC: init error / exception
   RUNNING --> RUNNING: blink / heartbeat tick
   RUNNING --> PANIC: TWDT timeout / exception
-  PANIC --> BOOTING: system reset
+  PANIC --> BOOTING: system reset / fault in panic handler
 ```
 
 ### 2.4 Component Layering
@@ -170,8 +180,9 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
   platform constraints.
 - **Deliverables:** firmware image meeting CON-01…CON-04; host-tier tests for
   the pure formatters; target-tier tests on the testbench.
-- **Exit criteria:** CON-01…CON-04, FR-BOOT-01, FR-BOOT-03, FR-HB-01…NFR-HB-04,
-  FR-LOG-01, FR-LOG-02 pass.
+- **Exit criteria:** CON-01…CON-04, FR-BOOT-01, FR-BOOT-03, FR-HB-01…NFR-HB-04
+  pass, and FR-LOG-01, FR-LOG-02 pass for the banner and heartbeat lines (the
+  LED and fault lines arrive in Phase 2).
 - **Depends on:** a testbench slot with the XIAO ESP32S3 Sense connected by USB-C,
   commissioned (journey Phase 2). Nothing from this FSD.
 
@@ -181,10 +192,16 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
   version from git tag, release-image hygiene, radio silence.
 - **Deliverables:** firmware meeting CON-05; fault-injection image variant;
   tag `v0.1.0`; human acceptance of the physical blink (FR-LED-03).
-- **Exit criteria:** FR-LED-01…FR-LED-03, FR-WDT-01…NFR-WDT-05, FR-BOOT-02,
-  FR-BUILD-01, NFR-SEC-01 pass.
-- **Depends on:** Phase 1. Every Phase-2 observation is made through the console
-  lines Phase 1 delivers (LED lines, heartbeat counter, banner reset reason).
+- **Exit criteria:** CON-05, CON-06, FR-LED-01…FR-LED-03, FR-WDT-01…NFR-WDT-05,
+  FR-BOOT-02, FR-BUILD-01, NFR-SEC-01 pass, and FR-LOG-01, FR-LOG-02 pass for the
+  LED and fault lines.
+- **Depends on:** Phase 1, through three routes:
+  - the console Phase 1 delivers (CON-04, FR-LOG-02 grammar) — FR-LED-01, FR-LED-02,
+    FR-WDT-01…NFR-WDT-05, FR-BOOT-02 and the LED and fault lines of FR-LOG-01/02;
+  - the release artefact Phase 1's build produces (CON-01) — CON-06, FR-BUILD-01,
+    NFR-SEC-01 (a), and the host tier — CON-05 (a);
+  - no firmware observation at all — CON-05 (b) by review, FR-LED-03 by a person at
+    the board, NFR-SEC-01 (b) by the testbench BLE scan.
 
 ## 4. Risks, Assumptions & Dependencies
 
@@ -374,6 +391,7 @@ verification:
   tolerance: as stated in timing
   prohibited_outcomes:
     - No reset within 10 s of the fault line (device hung).
+    - A new banner with no panic report before it (silent reboot).
     - Reset before 4.5 s (watchdog too eager, or a different fault).
     - Panic report naming a different cause (exception, interrupt watchdog).
   tier: target
@@ -473,6 +491,7 @@ persistent storage.
 | Flash size | 8 MB | CON-02 |
 | Partition table | single factory app | CON-03 |
 | Console | USB-Serial/JTAG | CON-04 |
+| PSRAM | disabled | CON-06 |
 | Fault injection | `none` in release images | FR-BUILD-01 |
 
 ## 13. Build & Release
@@ -529,15 +548,16 @@ Step-by-step procedures: [`../UserDocumentation/User-Manual.md`](../UserDocument
 
 | Tier | Runs on | Covers here |
 |---|---|---|
-| **host** | Dev machine, plain compiler; release artefacts | Pure formatters (banner, heartbeat, LED lines), reset-reason name mapping, heartbeat counter, toggle function; artefact checks CON-01, CON-03, FR-BUILD-01 |
+| **host** | Dev machine, plain compiler; release artefacts | Pure formatters (banner, heartbeat, LED lines), reset-reason name mapping, heartbeat counter, toggle function; artefact checks CON-01, CON-02 (header), CON-03, CON-06, FR-BUILD-01, NFR-SEC-01 (a); LED level mapping CON-05 (a) |
 | **target** | DUT on the testbench, console over USB-Serial/JTAG | Timing, alternation, banner content, watchdog reset and recovery, console-closed behaviour |
-| **bench** | DUT + real peers (WiFi/BLE scanner) | NFR-SEC-01 |
+| **bench** | DUT + real peers (BLE scanner) | NFR-SEC-01 (b) |
 | **other** | Review or human acceptance | LIFE-T3, LIFE-T7, CON-05 (b), FR-LED-03 |
 
 Layer mapping: L2 components are tested on the host tier as pure functions and
 on the target tier for timing. The L1 console format has its pure core on the
-host tier and the wire on the target tier. The L1 LED driver is checked at the
-bench tier. L0 is tested transitively.
+host tier and the wire on the target tier. The L1 LED driver has its level
+mapping on the host tier (CON-05 (a)) and its pin configuration checked by review
+(CON-05 (b)); no instrument observes GPIO21. L0 is tested transitively.
 
 Contract split: 4 requirements carry full YAML contracts (FR-WDT-01,
 FR-WDT-03, NFR-WDT-04, NFR-WDT-05) because a wrong pass is plausible: a silent
@@ -581,7 +601,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.5
+fsd_version: 0.1.6
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -589,7 +609,7 @@ author: Stefan
 reviewers: []
 approval_status: approved by author
 created: 2026-10-17
-last_updated: 2026-10-17
+last_updated: 2026-10-18
 change_history:
   - 2026-10-17 0.1.0 initial baseline
   - 2026-10-17 0.1.1 board is XIAO ESP32S3 Sense; user LED GPIO21, active-low
@@ -597,6 +617,7 @@ change_history:
   - 2026-10-17 0.1.3 LED check: FR-LED-03 to May (human acceptance), CON-05 by host test + review; no instrument can see GPIO21
   - 2026-10-17 0.1.4 FR-BOOT-01 measured by the banner's device timestamp; bench reset latency (10-11 s, batched output) makes the host clock unusable
   - 2026-10-17 0.1.5 NFR-SEC-01 WiFi half verified by the image's symbol table; the bench WiFi scan reports no BSSIDs
+  - 2026-10-18 0.1.6 Load-defined gate findings: phase exits split FR-LOG-01/02 by line type and name each Phase-2 route; LIFE-T7 covers BOOTING, LIFE-T10 added; FR-WDT-01 forbids a silent reboot; §16.0 tiers match the contracts; CON-06 PSRAM disabled (author); TWDT timeout named in §2.2
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)

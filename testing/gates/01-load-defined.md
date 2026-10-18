@@ -8,7 +8,7 @@
 
 | # | Must be true | Where to look | Evidence |
 |---|---|---|---|
-| 1 | Every Must/Should requirement and every CON-xx carries a verification contract with a "Must NOT happen" outcome | `docs/Functionality/FSD.md` | A compact row `\| <ID> \|` with a non-empty Must-NOT column, or an `id: <ID>` YAML block with `prohibited_outcomes` |
+| 1 | Every Must/Should requirement and every CON-xx (CON-01…CON-06) carries a verification contract with a "Must NOT happen" outcome | `docs/Functionality/FSD.md` | A compact row `\| <ID> \|` with a non-empty Must-NOT column, or an `id: <ID>` YAML block with `prohibited_outcomes` |
 | 2 | Every requirement is provenance-tagged | same | `[user]`, `[derived]`, `[pack:esp32]` or `[tooling]` on each FR/NFR/CON line |
 | 3 | State model has a complete transition table | FSD §2.3 | LIFE-T1..T9 plus a completeness statement |
 | 4 | Security profile precedes the security requirement | FSD §14 | Profile P-BENCH-ISOLATED stated before NFR-SEC-01 |
@@ -23,7 +23,7 @@ F=docs/Functionality/FSD.md
 git ls-files --error-unmatch docs/00-Overview.md docs/Method/AI-Workflow.md docs/UserDocumentation/User-Manual.md $F
 grep -nE '\(proposed\)|\(assumed\)|\{\{|TODO|TBD' $F && exit 1
 grep -q '^open_decisions: \[\]' $F
-for id in $(grep -oE '\*\*(FR|NFR)-[A-Z]+-[0-9]+\*\* \[(Must|Should)\]' $F | grep -oE '(FR|NFR)-[A-Z]+-[0-9]+') CON-01 CON-02 CON-03 CON-04 CON-05; do
+for id in $(grep -oE '\*\*(FR|NFR)-[A-Z]+-[0-9]+\*\* \[(Must|Should)\]' $F | grep -oE '(FR|NFR)-[A-Z]+-[0-9]+') CON-01 CON-02 CON-03 CON-04 CON-05 CON-06; do
   grep -qE "^\| $id[ (]|^id: $id\$" $F || echo "NO CONTRACT: $id"; done
 ```
 

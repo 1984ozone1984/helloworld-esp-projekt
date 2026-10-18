@@ -31,7 +31,7 @@ when it is configured. No other module knows about the composition.
 - **Fault injection is a separate component**, compiled in only when
   `CONFIG_HELLO_FAULT_STALL_TASK` is not `none`. Production modules contain no
   `#ifdef` for it; the hook is registered from `main/`.
-- **No PSRAM.** `CONFIG_SPIRAM` stays disabled. The firmware does not need it,
+- **No PSRAM** (FSD CON-06). `CONFIG_SPIRAM` stays disabled. The firmware does not need it,
   and a PSRAM mode that does not match the XIAO ESP32S3's octal PSRAM fails at
   boot.
 
