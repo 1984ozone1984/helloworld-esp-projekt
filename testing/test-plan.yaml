@@ -719,7 +719,7 @@ gates:
   load-defined:
     verdict: OPEN
     date: 2026-10-18
-    commit: e68221a   # FSD 0.1.9; fifth fresh checker. Rounds 1-4 SHUT (0f14268, ea52f55, c630138, e0793ab), fixed in FSD 0.1.6-0.1.9
+    commit: 4844a25   # FSD 0.1.16. Re-opened after contract changes: SHUT at 17687a1, ea46ea4, 4b89bfd, 974b0d5, e297bbf; earlier OPEN at e68221a superseded
   ai-harnessed: {verdict: OPEN, date: 2026-10-17, commit: dc2e706}
   dut-ready: {verdict: OPEN, date: 2026-10-17, commit: 91de447}
   ready-for-shipment: {verdict: null, date: null, commit: null}
