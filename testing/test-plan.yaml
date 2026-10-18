@@ -62,8 +62,18 @@ capabilities:
       change request needed (Embedded-AI-Harness): "serial/reset on native-USB
       ESP32-S3 resets the chip twice; second boot's early output lost".
   bench-serial-port-control:
-    what: Release and re-acquire the DUT serial port, so the console can be left unread (/api/serial/release)
-    available: yes
+    what: Close the DUT console port for a set time so nothing reads it, then reopen it with DTR/RTS low
+    available: no
+    observed: >-
+      2026-10-18, from the bench source (Embedded-AI-Harness pi/portal.py,
+      pi/plain_rfc2217_server.py). The proxy drains the port permanently ("Read the
+      device forever"), and no endpoint stops it on its own. /api/serial/release is not
+      a port release: it puts BOOT to high-Z and pulses EN, which resets the DUT. The
+      earlier "available: yes" came from reading the endpoint's name.
+    consequence: >-
+      NFR-WDT-05 (TC-WDT-05) is not done until the bench can leave a console unread.
+      Testbench change request needed (Embedded-AI-Harness): "an endpoint to close a
+      slot's serial port for N seconds and reopen it with DTR/RTS low, without a reset".
   bench-wifi-scan:
     what: WiFi scan from the bench radio (GET /api/wifi/scan)
     available: yes
@@ -424,8 +434,16 @@ tests:
     verifies: [CON-05]
     needs: []
     impl: "review: components/led/led.c"
-    status: not done
-    reason: review not recorded
+    status: successful
+    commit: 6e091e1
+    review: >-
+      2026-10-18, by Claude (author of the driver; owner countersign welcome).
+      led.c: LED_GPIO is GPIO_NUM_21; gpio_config mode GPIO_MODE_OUTPUT (push-pull,
+      not GPIO_MODE_OUTPUT_OD), pulls disabled; gpio_set_level(led_level(false)) = 1
+      before and after gpio_config. main/app_main.c calls led_init() before
+      blinker_start(), the only caller of led_set(). Prohibited outcomes absent: no
+      other pin, no open-drain, LED not lit before the first blink. Unchanged since
+      650b1c2.
   - id: TC-LED-03-accept
     name: A person confirms the orange user LED blinks about 1 Hz
     shape: atomic
@@ -529,9 +547,29 @@ tests:
     impl: tests/target/test_soak.py::test_tc_wdt_04_soak_10_min
     status: successful
     commit: 6e091e1
+  - id: TC-WDT-05
+    name: 60 s with the console unread, no reset
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: target
+    verifies: [NFR-WDT-05]
+    needs: [bench-serial-reset, bench-serial-monitor, bench-serial-port-control]
+    impl: tests/target/test_soak.py::test_tc_wdt_05_console_unread_60_s
+    status: not done
+    reason: 'not done: needs bench-serial-port-control — the bench reads every console permanently'
 
 gates:
-  load-defined: {verdict: null, date: null, commit: null}
+  load-defined:
+    verdict: SHUT
+    date: 2026-10-18
+    commit: 0f14268
+    findings:   # owned by /define; the AI-harnessed and DUT-ready verdicts were recorded without this gate open
+      - 'Row 7: Phase 1 exit names FR-LOG-01/02, whose contracts need LED and fault lines that only Phase 2 delivers; §3.2 says every Phase-2 observation is via Phase-1 console lines, but FR-LED-03, FR-BUILD-01 and NFR-SEC-01 are not'
+      - 'Row 3: §2.3 completeness claim false: no transition for a CPU exception/abort() in BOOTING, or a nested fault in PANIC'
+      - 'Judgement: FR-WDT-01 prohibited_outcomes do not forbid a reset with no panic report (silent reboot)'
+      - 'Row 1: §16.0 puts the LED driver and NFR-SEC-01 at bench tier; CON-05 is host/other and NFR-SEC-01 (a) is host'
+      - 'Judgement: TWDT timeout 5 s (sdkconfig.defaults) absent from §2.2; CONFIG_SPIRAM off contradicts "8 MB octal PSRAM" in §2.2, decision only in docs/Method/project/architecture.md'
   ai-harnessed: {verdict: OPEN, date: 2026-10-17, commit: dc2e706}
   dut-ready: {verdict: OPEN, date: 2026-10-17, commit: 91de447}
   ready-for-shipment: {verdict: null, date: null, commit: null}

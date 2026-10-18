@@ -110,3 +110,14 @@ def capture_for(bench, slot, seconds, chunk_s=60.0):
             since = out[-1].ts
         if time.time() >= end:
             return out
+
+
+def close_console(bench, slot, seconds):
+    """Leave the DUT console unread for `seconds` of host time, then reopen it with DTR/RTS low.
+
+    The bench has no such endpoint: its proxy reads every console permanently
+    (testing/test-plan.yaml, bench-serial-port-control). Returns the host times
+    of close and reopen once it does.
+    """
+    import pytest
+    pytest.skip("not done: needs bench-serial-port-control — the bench reads every console permanently")
