@@ -82,7 +82,8 @@ TWDT timeout of **5 s** with panic on timeout (FR-WDT-01, `CONFIG_ESP_TASK_WDT_T
 and fault injection **`none`** in release images (FR-BUILD-01,
 `CONFIG_HELLO_FAULT_STALL_TASK`). Taken from ESP-IDF defaults and relied on by the
 state model `[tooling]`: both idle tasks subscribed to the TWDT, and the interrupt
-watchdog enabled at **300 ms**.
+watchdog enabled at **300 ms**, and the bootloader's RTC watchdog at **9000 ms**
+until the application starts.
 
 ### 2.3 Software Architecture
 
@@ -112,11 +113,13 @@ loses to it on disagreement.
 | LIFE-T7 | BOOTING, RUNNING | CPU exception, `abort()` or interrupt-watchdog timeout | — | PANIC | Print panic report with backtrace | — | review only (tier other) |
 | LIFE-T8 | PANIC | Panic report complete | — | BOOTING | System reset | ≤ 1 s | FR-WDT-01, FR-WDT-03 |
 | LIFE-T9 | any | Host opens or closes the console port | DTR and RTS low | unchanged | Ignored | — | NFR-WDT-05 |
-| LIFE-T11 | any | Host opens the console port | DTR or RTS asserted | outside the model | Chip held in reset or strapped into download mode; an external reset (LIFE-T1) when released | — | none: an observer fault (Method `standards/testing.md` P-SERIAL) |
 | LIFE-T10 | PANIC | CPU exception or watchdog while the panic handler runs | — | BOOTING | Chip reset without completing the report (ESP-IDF panic re-entry) | — | review only (tier other) |
+| LIFE-T11 | any | Host opens the console port | DTR or RTS asserted | outside the model | Chip held in reset or strapped into download mode; an external reset (LIFE-T1) when released | — | none: an observer fault (Method `standards/testing.md` P-SERIAL) |
+| LIFE-T12 | BOOTING | RTC watchdog timeout (armed by the bootloader, disarmed when the app starts) | — | BOOTING | Chip reset with no panic report; next banner reports `reset_reason=WDT` | 9000 ms | review only (tier other) |
 
 **Completeness.** The firmware has no inputs other than its own timers, the
-TWDT, the interrupt watchdog (ESP-IDF default, enabled), CPU exceptions, reset,
+TWDT, the interrupt watchdog (ESP-IDF default, enabled), the bootloader's RTC
+watchdog (LIFE-T12, BOOTING only), CPU exceptions, reset,
 brownout, and the console port's open/close. A CPU exception, `abort()` or
 interrupt-watchdog timeout is possible in every state: LIFE-T7 covers BOOTING and RUNNING,
 LIFE-T10 covers PANIC. Opening the port with DTR or RTS asserted is an external
@@ -223,7 +226,10 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
     reopen it with DTR/RTS low, without a reset (a change request to the testbench);
   - FR-WDT-01…FR-WDT-03 need the console to capture the boot after a
     firmware-initiated (panic) reset from its first line; this was proven only for
-    bench-issued resets (a commissioning item on the debugging agenda).
+    bench-issued resets (a commissioning item on the debugging agenda). Their
+    stimulus also waits for the fault line 10 s into RUNNING, so it needs the same
+    single bench reset as FR-BOOT-01: today the first boot is observable for only
+    about 5 s.
 
 ## 4. Risks, Assumptions & Dependencies
 
@@ -240,7 +246,9 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
 - The DUT is a XIAO ESP32S3 Sense with its user LED on GPIO21 `[user]`.
 - The testbench can issue a hard reset over USB-Serial/JTAG and capture console
   output from the first line after reconnect `[derived]` — confirmed during
-  commissioning.
+  commissioning for the first boot after a bench reset only. The bench's second
+  chip reset loses that boot's first ~2 s, and resets the firmware causes itself
+  are not yet proven (§3, external dependencies).
 
 **Dependencies**
 - ESP-IDF v6.0.2 (`espressif/idf:v6.0.2`).
@@ -510,6 +518,7 @@ persistent storage.
 | Heartbeat period | 1000 ms | FR-HB-01 |
 | TWDT timeout | 5 s, panic on timeout, blink + heartbeat + both idle tasks subscribed | FR-WDT-01, §2.3 |
 | Interrupt watchdog | enabled, 300 ms (ESP-IDF default) | §2.3 |
+| Bootloader RTC watchdog | enabled, 9000 ms, disarmed when the app starts (ESP-IDF default) | §2.3 LIFE-T12 |
 | LED GPIO | 21, active-low | CON-05 |
 | Flash size | 8 MB | CON-02 |
 | Partition table | single factory app | CON-03 |
@@ -624,7 +633,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.8
+fsd_version: 0.1.9
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -643,6 +652,7 @@ change_history:
   - 2026-10-18 0.1.6 Load-defined gate findings: phase exits split FR-LOG-01/02 by line type and name each Phase-2 route; LIFE-T7 covers BOOTING, LIFE-T10 added; FR-WDT-01 forbids a silent reboot; §16.0 tiers match the contracts; CON-06 PSRAM disabled (author); TWDT timeout named in §2.2
   - 2026-10-18 0.1.7 Load-defined round 2: interrupt watchdog and brownout in the state model, software reset ruled out; external dependencies of both phases named (author: keep contracts); NFR-SEC-01 (b) scan in ≤ 15 s pieces
   - 2026-10-18 0.1.8 Load-defined round 3: TWDT timeout possible in BOOTING (idle tasks); LIFE-T11 for a port opened with DTR/RTS asserted; prohibited transitions name the external resets; FR-BOOT-01 depends on a single bench reset; interrupt watchdog 300 ms and idle-task subscription stated
+  - 2026-10-18 0.1.9 Load-defined round 4: LIFE-T12 bootloader RTC watchdog (9000 ms) in BOOTING; FR-WDT-01..03 also need a single bench reset; §4 assumption limited to what commissioning proved
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
