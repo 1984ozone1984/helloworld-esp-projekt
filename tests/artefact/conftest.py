@@ -29,3 +29,11 @@ def app_elf(coldflash):
     if not elfs:
         pytest.skip("not done: no firmware_*.elf beside coldflash/")
     return elfs[0].read_bytes()
+
+
+@pytest.fixture(scope="session")
+def sdkconfig(coldflash):
+    p = coldflash.parent / "sdkconfig.generated"
+    if not p.is_file():
+        pytest.skip("not done: no sdkconfig.generated beside coldflash/")
+    return p.read_text()

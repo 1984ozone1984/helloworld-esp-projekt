@@ -1,4 +1,4 @@
-"""FSD §2.2 CON-01, CON-02 (a), CON-03 and §13 FR-BUILD-01 — read from the image bytes.
+"""FSD §2.2 CON-01, CON-02 (a), CON-03, CON-06 and §13 FR-BUILD-01 — read from the image bytes and its sdkconfig.
 
 Formats: ESP-IDF app image header, esp_app_desc_t, and the partition table
 (docs.espressif.com, "App Image Format" and "Partition Tables").
@@ -66,3 +66,9 @@ def test_tc_sec_01_no_radio_stack(app_elf):
     assert not missing, f"positive control failed, symbol table unreadable: {missing}"
     linked = [s.decode() for s in RADIO_SYMBOLS if b"\0" + s + b"\0" in app_elf]
     assert not linked, f"radio stack linked: {linked}"
+
+
+def test_tc_con_06_no_psram(sdkconfig):
+    """TC-CON-06 · CON-06: the generated sdkconfig leaves CONFIG_SPIRAM unset."""
+    assert "CONFIG_IDF_TARGET=\"esp32s3\"" in sdkconfig, "not this project's sdkconfig"
+    assert "CONFIG_SPIRAM=y" not in sdkconfig.splitlines(), "PSRAM enabled"

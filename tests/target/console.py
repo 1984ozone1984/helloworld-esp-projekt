@@ -67,14 +67,15 @@ def first_boot(lines):
     return out
 
 
-def reset_and_capture(bench, slot, after_banner_s=0.0, timeout_s=30.0):
+def reset_and_capture(bench, slot, after_banner_s=0.0, timeout_s=30.0, all_boots=False):
     """Hard-reset the DUT and return every console line since the reset.
 
     The bench's reset call takes ~10 s and delivers boot output in one batch
     (testing/test-plan.yaml, dut-console-after-reset), so lines are read from
     the recorded buffer, never from a monitor opened afterwards. Returns the
     first boot's lines once `after_banner_s` of host time has passed after the
-    first banner/Init line.
+    first banner/Init line. With `all_boots`, every line since the reset is
+    returned uncut, for tests that must see a second boot.
     """
     t0 = time.time()
     bench.serial_reset(slot=slot)
@@ -86,9 +87,10 @@ def reset_and_capture(bench, slot, after_banner_s=0.0, timeout_s=30.0):
             if ln.match(BANNER) or "Init complete" in ln.text:
                 first = first or ln
         if first and lines[-1].ts - first.ts >= after_banner_s:
-            return first_boot(lines)
+            return lines if all_boots else first_boot(lines)
         time.sleep(0.5)
-    return first_boot(fetch(bench, slot, t0))
+    lines = fetch(bench, slot, t0)
+    return lines if all_boots else first_boot(lines)
 
 
 def capture_for(bench, slot, seconds, chunk_s=60.0):

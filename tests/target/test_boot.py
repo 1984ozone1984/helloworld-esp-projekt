@@ -1,7 +1,7 @@
 """FSD §5 Boot banner and §2.2 CON-04 — target tier (testing/test-plan.yaml)."""
 import pytest
 
-from tests.target.console import BANNER, PANIC_REPORT, matches
+from tests.target.console import BANNER, PANIC_REPORT, first_boot, matches, reset_and_capture
 
 NON_PANIC = {"POWERON", "EXT", "SW", "USB", "JTAG"}
 
@@ -13,7 +13,7 @@ def _one_banner(boot):
 
 
 def test_tc_boot_01_banner_within_3s(boot):
-    """TC-BOOT-01 · FR-BOOT-01: one banner, log timestamp ≤ 3000 ms, no panic before it."""
+    """TC-BOOT-01 · FR-BOOT-01: banner log timestamp ≤ 3000 ms, no panic before it (first boot only)."""
     ln, m = _one_banner(boot)
     before = boot[: boot.index(ln)]
     assert not [x for x in before if PANIC_REPORT.search(x.text)], "panic report before the banner"
@@ -47,3 +47,12 @@ def test_tc_con_02_dut_flash_size(bench, slot, image):
     info = bench.chip_info(slot)
     size = info.get("flash_size", "")
     assert size.endswith("MB") and int(size[:-2]) >= 8, info
+
+
+def test_tc_boot_01_single_one_banner_per_reset(bench, slot, image):
+    """TC-BOOT-01-single · FR-BOOT-01: one bench reset, one chip reset, exactly one banner."""
+    lines = reset_and_capture(bench, slot, after_banner_s=11.0, all_boots=True)
+    if len(first_boot(lines)) < len(lines):
+        pytest.skip("not done: needs bench-single-reset — the bench reset the chip twice")
+    banners = matches(lines, BANNER)
+    assert len(banners) == 1, f"{len(banners)} banners in one boot"

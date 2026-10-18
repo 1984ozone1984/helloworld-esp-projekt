@@ -237,7 +237,7 @@ tests:
 
   # §5 Boot banner · §8 Console line format · CON-04
   - id: TC-BOOT-01
-    name: One banner per reset, log timestamp <= 3000 ms
+    name: Banner log timestamp <= 3000 ms, no panic before it
     shape: atomic
     kind: standard
     wave: 1
@@ -247,6 +247,20 @@ tests:
     impl: tests/target/test_boot.py::test_tc_boot_01_banner_within_3s
     status: successful
     commit: 6e091e1
+    note: >-
+      Reads the first boot only, so it cannot see a second banner; "exactly one
+      banner per reset" is TC-BOOT-01-single (split 2026-10-18, FSD 0.1.8 §3.1).
+  - id: TC-BOOT-01-single
+    name: One bench reset, one chip reset, exactly one banner
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: target
+    verifies: [FR-BOOT-01]
+    needs: [bench-serial-reset, bench-serial-monitor, bench-single-reset]
+    impl: tests/target/test_boot.py::test_tc_boot_01_single_one_banner_per_reset
+    status: not done
+    reason: 'not done: needs bench-single-reset — the bench resets the chip twice'
   - id: TC-BOOT-02
     name: Banner version equals the image's git describe
     shape: atomic
@@ -504,6 +518,17 @@ tests:
     impl: tests/artefact/test_image.py::test_tc_con_03_partitions_and_size
     status: successful
     commit: 6e091e1
+  - id: TC-CON-06
+    name: Generated sdkconfig leaves PSRAM disabled
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: host
+    verifies: [CON-06]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_con_06_no_psram
+    status: not done
+    reason: not yet run (declared 2026-10-18 with FSD 0.1.6)
   - id: TC-BUILD-01
     name: Release image has no fault-injection path
     shape: atomic
