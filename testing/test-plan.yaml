@@ -327,7 +327,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_04_console_config
     status: successful
-    commit: ea46ea4
+    commit: 4b89bfd
   - id: TC-CON-04
     name: Banner arrives on the USB-Serial/JTAG port
     shape: atomic
@@ -521,7 +521,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_01_chip_and_idf
     status: successful
-    commit: ea46ea4
+    commit: 4b89bfd
   - id: TC-CON-02-host
     name: Image header says 8 MB flash
     shape: atomic
@@ -532,7 +532,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_02_header_flash_size
     status: successful
-    commit: ea46ea4
+    commit: 4b89bfd
   - id: TC-CON-02
     name: DUT reports at least 8 MB flash
     shape: atomic
@@ -554,7 +554,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_03_partitions_and_size
     status: successful
-    commit: ea46ea4
+    commit: 4b89bfd
   - id: TC-CON-06
     name: Generated sdkconfig leaves PSRAM disabled
     shape: atomic
@@ -565,7 +565,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_06_no_psram
     status: successful
-    commit: ea46ea4
+    commit: 4b89bfd
   - id: TC-BUILD-01
     name: Release image has no fault-injection path
     shape: atomic
@@ -576,7 +576,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_build_01_no_fault_path
     status: successful
-    commit: ea46ea4
+    commit: 4b89bfd
   - id: TC-SEC-01-host
     name: No WiFi, PHY or Bluetooth stack linked
     shape: atomic
@@ -587,7 +587,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_sec_01_no_radio_stack
     status: successful
-    commit: ea46ea4
+    commit: 4b89bfd
   - id: TC-SEC-01
     name: No BLE advertising from the DUT's addresses
     shape: atomic
