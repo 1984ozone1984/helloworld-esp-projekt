@@ -306,6 +306,18 @@ tests:
     impl: tests/artefact/test_image.py::test_tc_boot_02_no_version_override
     status: successful
     commit: 974b0d5
+  - id: TC-BOOT-02-dirty
+    name: A dirty-tree build reports its -dirty describe
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: target
+    verifies: [FR-BOOT-02]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor]
+    impl: tests/target/test_boot.py::test_tc_boot_02_version_is_the_images
+    image: dirty   # build.yml variant; expected version from the artefact name
+    status: not done
+    reason: not yet run (declared 2026-10-18 with FSD 0.1.15)
   - id: TC-BOOT-03-host
     name: Every esp_reset_reason_t value maps to its A.2 name
     shape: atomic
@@ -372,6 +384,17 @@ tests:
     impl: tests/host/test_console_fmt.c
     status: successful
     commit: 6e091e1
+  - id: TC-LOG-03
+    name: Fault image's fault line arrives on USB and matches A.1
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: target
+    verifies: [FR-LOG-01, FR-LOG-02]
+    needs: [bench-flash, bench-serial-monitor, fault-injection-image]
+    impl: tests/target/test_console.py::test_tc_log_03_fault_line_on_usb
+    status: not done
+    reason: not yet run (declared 2026-10-18 with FSD 0.1.15)
   - id: TC-LOG-02
     name: Every hello/led/fault line on the wire matches A.1
     shape: atomic

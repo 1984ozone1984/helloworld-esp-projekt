@@ -10,3 +10,5 @@ def pytest_addoption(parser):
                      help="CI artefact coldflash/ directory (flash_args + images)")
     parser.addoption("--expect-version", default=os.environ.get("EXPECT_VERSION"),
                      help="version the banner must report; default: from the artefact directory name")
+    parser.addoption("--fault-coldflash-dir", default=os.environ.get("FAULT_COLDFLASH_DIR"),
+                     help="coldflash/ of a fault-heartbeat image, for the fault-line checks (FR-LOG-01/02 (c))")

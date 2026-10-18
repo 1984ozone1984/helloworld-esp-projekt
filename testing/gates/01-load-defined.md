@@ -30,7 +30,7 @@ for id in $(grep -oE '\*\*(FR|NFR)-[A-Z]+-[0-9]+\*\* \[(Must|Should)\]' $F | gre
 ## Judgement checks
 
 - Pick five contracts at random. Could a competent stranger build a rig from each one without reading any code? Quote the stimulus and the observation.
-- For every Must/Should and CON, taking all of its contract rows together: would an implementation that breaks the requirement still pass? Name, per requirement, the observation that fails such an implementation (a fixed version string, a UART-primary console, a fault path whose marker never appears contiguously, a reboot that keeps a count plausible). A check that cannot fail is a finding.
+- For every Must/Should and CON, taking all of its contract rows together: would an honest implementation that gets the requirement wrong still pass? Name, per requirement, the observation that fails it. In scope are the mistakes an implementer plausibly makes — a wrong or missing config value, a version that does not come from the tree (fixed, overridden, or missing `-dirty`), a line missing or in the wrong form, a wrong pin or polarity, a silent reboot, a reboot that keeps a count plausible. Out of scope is code written to recognise and defeat a check. A check that cannot fail on an in-scope mistake is a finding.
 - For FR-WDT-01 and NFR-WDT-05, would a device that silently reboots pass? Quote the prohibited outcome that stops it.
 - Does every number the build reads (flash size, partitions, console, LED pin, IDF version) appear in FSD §2.2? Quote each one.
 

@@ -286,6 +286,7 @@ boot.
 | FR-BOOT-02 (a) | Clean checkout of tag `v0.1.0` · build, flash, reset | `version=v0.1.0` | — | `-dirty` or `-g<hash>` suffix; IDF fallback version `1` | target |
 | FR-BOOT-02 (b) | CI build of an untagged commit · record `git describe --always --tags --dirty` of that checkout; flash, reset | `version` equals the recorded string | — | Any other string, including a fixed release version; IDF fallback version `1` | target |
 | FR-BOOT-02 (c) | Source tree and generated `sdkconfig` · check that nothing overrides ESP-IDF's default version, which is `git describe --always --tags --dirty` `[tooling]` | No `version.txt` at the project root; root `CMakeLists.txt` sets no `PROJECT_VER`; `CONFIG_APP_PROJECT_VER_FROM_CONFIG` unset | — | Any of the three present (each would replace the describe string, `--dirty` included) | host |
+| FR-BOOT-02 (d) | CI build from a checkout with one uncommitted change to a tracked file · record `git describe --always --tags --dirty` of that tree; flash, reset | `version` equals the recorded string, which ends in `-dirty` | — | `version` without the `-dirty` suffix | target |
 | FR-BOOT-03 (a) | Host test · map every `esp_reset_reason_t` value, plus one out-of-range value | Each value maps to its A.2 name; out-of-range maps to `UNKNOWN` | — | Empty string; crash | host |
 | FR-BOOT-03 (b) | DUT running · bench hard reset over USB-Serial/JTAG | `reset_reason` is a non-panic reason (one of `POWERON`, `EXT`, `SW`, `USB`, `JTAG`) | — | `PANIC`, `TASK_WDT`, `INT_WDT`, `UNKNOWN` | target |
 
@@ -360,6 +361,7 @@ in the loop, a terminal for a person.
 | FR-LOG-01 | Same capture as FR-BOOT-01 + FR-HB-01, on the USB port only | All four line types present (fault line in the fault image only) | Any of the four types missing from the USB capture | target |
 | FR-LOG-02 (a) | Host test · format each line type from fixed inputs | Output matches its A.1 regex | Escape bytes (0x1B); trailing spaces | host |
 | FR-LOG-02 (b) | 60 s capture after reset | Every line whose tag is `hello`, `led` or `fault` matches its A.1 regex | Any such line not matching | target |
+| FR-LOG-01/02 (c) | Fault-heartbeat image (§11) · flash, capture the USB console for 15 s | A line tagged `fault` arrives, and every such line matches the A.1 fault regex | No `fault` line on USB; a `fault` line at another level or in another form | target |
 
 **Protocol.** Text over USB CDC-ACM; lines terminated by LF (a preceding CR is
 permitted and ignored). No input is read. Lines with other tags (ESP-IDF
@@ -640,7 +642,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.14
+fsd_version: 0.1.15
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -665,6 +667,7 @@ change_history:
   - 2026-10-18 0.1.12 FR-BOOT-02 (b): an untagged build must carry its own git describe; the tag case alone passes an image with a fixed version
   - 2026-10-18 0.1.13 Contract sweep (can each check fail?): CON-01 idf_ver exact; CON-04 (b) and FR-LOG-01 forbid only what the USB port can show; NFR-WDT-05 needs N ≥ 10; log colours in §12; §4 bench dependencies match the contracts
   - 2026-10-18 0.1.14 FR-BOOT-02 (c) no version override (catches a dropped --dirty); NFR-WDT-05 compares the count with elapsed host time; FR-WDT-01 repeat adapted for blink; FR-WDT-01..03 no longer need a single bench reset (seam bring-up)
+  - 2026-10-18 0.1.15 FR-BOOT-02 (d) a dirty-tree build must report -dirty; FR-LOG-01/02 (c) read the fault line from a fault image
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)

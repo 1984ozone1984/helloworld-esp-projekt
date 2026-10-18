@@ -25,9 +25,10 @@ on:
       variant:
         description: 'Which firmware to build'
         type: choice
-        # fault-* need components/fault_inject and sdkconfig.<variant>.defaults,
-        # which arrive with FSD Phase 2; until then those builds fail loudly.
-        options: [production, fault-heartbeat, fault-blink]
+        # fault-* stall a task (FSD §11). dirty is the production image built
+        # from a tree with one uncommitted change, so its version must end in
+        # -dirty (FSD FR-BOOT-02 (d)).
+        options: [production, fault-heartbeat, fault-blink, dirty]
         default: production
 
 permissions:
@@ -64,13 +65,19 @@ jobs:
           # A tag is always production.
           [[ "$GITHUB_REF" == refs/tags/v* ]] && VARIANT=production
 
+          if [ "$VARIANT" = "dirty" ]; then
+            echo "<!-- dirty build, FSD FR-BOOT-02 (d) -->" >> README.md
+          fi
           VERSION=$(git describe --always --tags --dirty)
+          if [ "$VARIANT" = "dirty" ] && [[ "$VERSION" != *-dirty ]]; then
+            echo "FATAL: dirty build but git describe gave $VERSION"; exit 1
+          fi
           DEFAULTS="sdkconfig.defaults"
-          if [ "$VARIANT" != "production" ]; then
+          if [ "$VARIANT" != "production" ] && [ "$VARIANT" != "dirty" ]; then
             DEFAULTS="sdkconfig.defaults;sdkconfig.$VARIANT.defaults"
           fi
           ARTEFACT="$VERSION"
-          [ "$VARIANT" = "production" ] || ARTEFACT="$VERSION-$VARIANT"
+          [ "$VARIANT" = "production" ] || [ "$VARIANT" = "dirty" ] || ARTEFACT="$VERSION-$VARIANT"
 
           { echo "variant=$VARIANT"; echo "version=$VERSION"
             echo "artefact=$ARTEFACT"; echo "defaults=$DEFAULTS"; } >> $GITHUB_OUTPUT
@@ -90,7 +97,7 @@ jobs:
         if: env.MULTI_VARIANT == 'true'
         run: |
           grep -q "$VARIANT_MARKER" build/$APP.bin && FOUND=yes || FOUND=no
-          WANT=no; [ "${{ steps.plan.outputs.variant }}" = "production" ] || WANT=yes
+          case "${{ steps.plan.outputs.variant }}" in production|dirty) WANT=no ;; *) WANT=yes ;; esac
           if [ "$FOUND" != "$WANT" ]; then
             echo "FATAL: ${{ steps.plan.outputs.variant }} image, marker found=$FOUND, expected=$WANT"
             exit 1
