@@ -292,6 +292,7 @@ tests:
     verifies: [FR-BOOT-02]
     needs: [bench-flash, bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_boot.py::test_tc_boot_02_version_is_the_images
+    note: Runs on untagged CI builds, so it is FR-BOOT-02 (b); (a) is the release journey's JRN-01.2.
     status: successful
     commit: 6e091e1
   - id: TC-BOOT-03-host

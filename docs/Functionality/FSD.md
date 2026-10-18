@@ -283,7 +283,8 @@ boot.
 | ID | Precondition · stimulus | Expected observation | Timing | Must NOT happen | Tier |
 |---|---|---|---|---|---|
 | FR-BOOT-01 | DUT running, console open (DTR/RTS low) · bench issues a hard reset | Exactly one banner line matching A.1 | Banner's log timestamp ≤ 3000 ms (the ESP-IDF timestamp counts from chip reset, bootloader included) | No banner; two banners for one reset; banner preceded by a panic report | target |
-| FR-BOOT-02 | Clean checkout of tag `v0.1.0` · build, flash, reset | `version=v0.1.0` | — | `-dirty` or `-g<hash>` suffix; IDF fallback version `1` | target |
+| FR-BOOT-02 (a) | Clean checkout of tag `v0.1.0` · build, flash, reset | `version=v0.1.0` | — | `-dirty` or `-g<hash>` suffix; IDF fallback version `1` | target |
+| FR-BOOT-02 (b) | CI build of an untagged commit · record `git describe --always --tags --dirty` of that checkout; flash, reset | `version` equals the recorded string | — | Any other string, including a fixed release version; IDF fallback version `1` | target |
 | FR-BOOT-03 (a) | Host test · map every `esp_reset_reason_t` value, plus one out-of-range value | Each value maps to its A.2 name; out-of-range maps to `UNKNOWN` | — | Empty string; crash | host |
 | FR-BOOT-03 (b) | DUT running · bench hard reset over USB-Serial/JTAG | `reset_reason` is a non-panic reason (one of `POWERON`, `EXT`, `SW`, `USB`, `JTAG`) | — | `PANIC`, `TASK_WDT`, `INT_WDT`, `UNKNOWN` | target |
 
@@ -634,7 +635,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.11
+fsd_version: 0.1.12
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -656,6 +657,7 @@ change_history:
   - 2026-10-18 0.1.9 Load-defined round 4: LIFE-T12 bootloader RTC watchdog (9000 ms) in BOOTING; FR-WDT-01..03 also need a single bench reset; §4 assumption limited to what commissioning proved
   - 2026-10-18 0.1.10 FR-BUILD-01 contract: search for the fault line's format string with a positive control, plus the generated sdkconfig; the literal `fault: stalling` is never contiguous in an image (tag and body are stored apart), so the old search passed any image
   - 2026-10-18 0.1.11 CON-04 (a): the generated sdkconfig names USB-Serial/JTAG as primary console; the bench check alone passes a UART-primary image, whose secondary console defaults to USB-Serial/JTAG
+  - 2026-10-18 0.1.12 FR-BOOT-02 (b): an untagged build must carry its own git describe; the tag case alone passes an image with a fixed version
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
