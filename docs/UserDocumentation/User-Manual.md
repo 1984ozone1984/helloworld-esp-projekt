@@ -4,8 +4,9 @@ How to install and run helloworld-esp. Every step-by-step operating procedure
 lives in this manual and nowhere else. The FSD says what the firmware does;
 this manual says how to make it do it.
 
-**Status: nothing is deployable yet.** The FSD is baselined and no firmware has
-been built. Chapters 2–5 are filled in as the build phases deliver.
+**Status: development builds only; no release yet.** CI builds the firmware and
+it runs on the testbench, but `v0.1.0` is not tagged. Chapters 2–5 are filled in
+when the first release ships.
 
 ## Contents
 

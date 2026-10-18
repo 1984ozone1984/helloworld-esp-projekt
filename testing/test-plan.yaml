@@ -295,6 +295,17 @@ tests:
     note: Runs on untagged CI builds, so it is FR-BOOT-02 (b); (a) is the release journey's JRN-01.2.
     status: successful
     commit: 6e091e1
+  - id: TC-BOOT-02-host
+    name: Nothing overrides the git-describe version
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: host
+    verifies: [FR-BOOT-02]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_boot_02_no_version_override
+    status: not done
+    reason: not yet run (declared 2026-10-18 with FSD 0.1.14)
   - id: TC-BOOT-03-host
     name: Every esp_reset_reason_t value maps to its A.2 name
     shape: atomic
@@ -632,7 +643,7 @@ tests:
     wave: 3
     tier: target
     verifies: [FR-WDT-01]
-    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, fault-injection-image, dut-console-after-panic-reset]
     image: fault-heartbeat
     impl: ""
     status: not done
@@ -644,7 +655,7 @@ tests:
     wave: 3
     tier: target
     verifies: [FR-WDT-01]
-    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, fault-injection-image, dut-console-after-panic-reset]
     image: fault-blink
     impl: ""
     status: not done
@@ -656,7 +667,7 @@ tests:
     wave: 3
     tier: target
     verifies: [FR-WDT-02]
-    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, fault-injection-image, dut-console-after-panic-reset]
     image: fault-heartbeat
     impl: ""
     status: not done
@@ -668,7 +679,7 @@ tests:
     wave: 3
     tier: target
     verifies: [FR-WDT-03]
-    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, fault-injection-image, dut-console-after-panic-reset]
     image: fault-heartbeat
     impl: ""
     status: not done

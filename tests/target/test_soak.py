@@ -18,17 +18,19 @@ def test_tc_wdt_04_soak_10_min(bench, slot, boot):
 
 @pytest.mark.slow
 def test_tc_wdt_05_console_unread_60_s(bench, slot, boot):
-    """TC-WDT-05 · NFR-WDT-05: 60 s with nobody reading the console, then n >= N + 58 and no banner."""
-    before = [int(m.group(2)) for _, m in matches(capture_for(bench, slot, 5.0), HEARTBEAT)]
+    """TC-WDT-05 · NFR-WDT-05: 60 s with nobody reading the console; n keeps pace with host time, no banner."""
+    before = matches(capture_for(bench, slot, 5.0), HEARTBEAT)
     assert before, "no heartbeat before closing the console"
-    if before[-1] < 10:
-        pytest.skip(f"not done: precondition N >= 10, N = {before[-1]}")
+    ln_n, m_n = before[-1]
+    n0 = int(m_n.group(2))
+    if n0 < 10:
+        pytest.skip(f"not done: precondition N >= 10, N = {n0}")
     close_console(bench, slot, 60.0)
     after = capture_for(bench, slot, 5.0)
     beats = matches(after, HEARTBEAT)
     assert beats, "no heartbeat after reopening (the reopen may have halted the chip: test void)"
-    first_beat = beats[0][0]
-    banners = [m.group(3) for ln, m in matches(after, BANNER) if ln.ts <= first_beat.ts]
+    ln_m, m_m = beats[0]
+    banners = [m.group(3) for ln, m in matches(after, BANNER) if ln.ts <= ln_m.ts]
     assert not banners, f"the device reset while unobserved: reset_reason={banners}"
-    n = int(beats[0][1].group(2))
-    assert n >= before[-1] + 58, f"heartbeat n={n} after reopen, {before[-1]} before: counter restarted"
+    gained, elapsed = int(m_m.group(2)) - n0, ln_m.ts - ln_n.ts
+    assert abs(gained - elapsed) <= 2, f"n gained {gained} in {elapsed:.1f} s host time: counts lost"

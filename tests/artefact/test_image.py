@@ -84,3 +84,12 @@ def test_tc_con_04_console_config(sdkconfig):
     assert "CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y" in lines
     assert "CONFIG_ESP_CONSOLE_UART_NUM=-1" in lines
     assert not [l for l in lines if l in ("CONFIG_ESP_CONSOLE_UART_DEFAULT=y", "CONFIG_ESP_CONSOLE_UART_CUSTOM=y")]
+
+
+def test_tc_boot_02_no_version_override(sdkconfig):
+    """TC-BOOT-02-host · FR-BOOT-02 (c): ESP-IDF's git-describe version is not overridden."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]
+    assert not (root / "version.txt").exists(), "version.txt overrides git describe"
+    assert "PROJECT_VER" not in (root / "CMakeLists.txt").read_text(), "PROJECT_VER set in CMakeLists.txt"
+    assert "CONFIG_APP_PROJECT_VER_FROM_CONFIG=y" not in sdkconfig.splitlines()

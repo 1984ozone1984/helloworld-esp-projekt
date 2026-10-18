@@ -18,12 +18,12 @@ CONFIG_IDF_TARGET="esp32s3"
 CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
 CONFIG_PARTITION_TABLE_SINGLE_APP=y
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
-CONFIG_LOG_COLORS=n
+# CONFIG_LOG_COLORS is not set
 CONFIG_ESP_TASK_WDT_EN=y
 CONFIG_ESP_TASK_WDT_INIT=y
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=5
 CONFIG_ESP_TASK_WDT_PANIC=y
-CONFIG_SPIRAM=n
+# CONFIG_SPIRAM is not set
 ```
 
 Two fault-injection variants exist, `fault-heartbeat` and `fault-blink`. Each
@@ -38,7 +38,8 @@ apart, so `fault: stalling` never appears in any image) in both directions.
 
 ## Managed components
 
-- `dependencies.lock` is committed; `managed_components/` is not.
+- None are used today. When the first is added, commit `dependencies.lock`;
+  never commit `managed_components/`.
 - Declare `REQUIRES`/`PRIV_REQUIRES` only for what the code includes today. A
   speculative requirement fails at configure time and names the component, not
   the speculation.

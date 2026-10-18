@@ -222,15 +222,15 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
   - no firmware observation at all — CON-05 (b) by review, FR-LED-03 by a person at
     the board, NFR-SEC-01 (b) by the testbench BLE scan.
 - **Depends on (external):** two exit criteria rest on abilities neither phase
-  delivers. Until each exists, that criterion is not done and Phase 2 cannot exit:
+  delivers:
   - NFR-WDT-05 needs the testbench to close a slot's console port for 60 s and
     reopen it with DTR/RTS low, without a reset (a change request to the testbench);
+    until it can, NFR-WDT-05 is not done and Phase 2 cannot exit;
   - FR-WDT-01…FR-WDT-03 need the console to capture the boot after a
-    firmware-initiated (panic) reset from its first line (debugging-agenda item 5,
-    closed 2026-10-18). Their
-    stimulus also waits for the fault line 10 s into RUNNING, so it needs the same
-    single bench reset as FR-BOOT-01: today the first boot is observable for only
-    about 5 s.
+    firmware-initiated (panic) reset from its first line, proven by commissioning
+    (debugging-agenda item 5, closed 2026-10-18). A single bench reset is not needed: after a flash or a
+    bench reset the boot that reaches the fault line runs undisturbed, and each
+    reset the fault causes is a CPU reset that keeps the console attached.
 
 ## 4. Risks, Assumptions & Dependencies
 
@@ -285,6 +285,7 @@ boot.
 | FR-BOOT-01 | DUT running, console open (DTR/RTS low) · bench issues a hard reset | Exactly one banner line matching A.1 | Banner's log timestamp ≤ 3000 ms (the ESP-IDF timestamp counts from chip reset, bootloader included) | No banner; two banners for one reset; banner preceded by a panic report | target |
 | FR-BOOT-02 (a) | Clean checkout of tag `v0.1.0` · build, flash, reset | `version=v0.1.0` | — | `-dirty` or `-g<hash>` suffix; IDF fallback version `1` | target |
 | FR-BOOT-02 (b) | CI build of an untagged commit · record `git describe --always --tags --dirty` of that checkout; flash, reset | `version` equals the recorded string | — | Any other string, including a fixed release version; IDF fallback version `1` | target |
+| FR-BOOT-02 (c) | Source tree and generated `sdkconfig` · check that nothing overrides ESP-IDF's default version, which is `git describe --always --tags --dirty` `[tooling]` | No `version.txt` at the project root; root `CMakeLists.txt` sets no `PROJECT_VER`; `CONFIG_APP_PROJECT_VER_FROM_CONFIG` unset | — | Any of the three present (each would replace the describe string, `--dirty` included) | host |
 | FR-BOOT-03 (a) | Host test · map every `esp_reset_reason_t` value, plus one out-of-range value | Each value maps to its A.2 name; out-of-range maps to `UNKNOWN` | — | Empty string; crash | host |
 | FR-BOOT-03 (b) | DUT running · bench hard reset over USB-Serial/JTAG | `reset_reason` is a non-panic reason (one of `POWERON`, `EXT`, `SW`, `USB`, `JTAG`) | — | `PANIC`, `TASK_WDT`, `INT_WDT`, `UNKNOWN` | target |
 
@@ -431,7 +432,7 @@ verification:
     - Full console capture with host timestamps from reset to second banner.
   cleanup:
     - Reflash the release image; confirm a banner with a non-panic reset reason.
-  repeat: once more with stall task = blink.
+  repeat: once more with stall task = blink, reading "heartbeat" as "blink" and heartbeat lines as LED lines throughout (heartbeat lines continue).
 ```
 
 ```yaml
@@ -488,17 +489,19 @@ verification:
 id: NFR-WDT-05
 verification:
   preconditions:
-    - Release image; DUT RUNNING; console open; last heartbeat n = N noted, with N ≥ 10
-      so that a reboot while closed cannot reach N + 58.
+    - Release image; DUT RUNNING; console open; last heartbeat n = N noted at host
+      time t_N, with N ≥ 10 so that a reboot loses at least 10 counts.
   stimulus:
     - Close the console port for 60 s (host-clock), then reopen with DTR/RTS low.
   expected_observations:
-    - The first heartbeat after reopening has n ≥ N + 58.
+    - The first heartbeat after reopening, n = M at host time t_M, has
+      M − N within (t_M − t_N) ± 2: one count per second throughout (FR-HB-01),
+      however long the reopen took.
     - No banner between reopen and that heartbeat.
   timing: 60 s closed
-  tolerance: n ≥ N + 58 (allows 2 s of reopen latency)
+  tolerance: ± 2 counts against the elapsed host time
   prohibited_outcomes:
-    - n restarted near 1 (device reset while unobserved).
+    - M − N below (t_M − t_N) − 2 (counts lost: device reset while unobserved, at any reopen latency).
     - A banner with reset_reason TASK_WDT on reopen.
     - The reopen itself halting the chip (DTR/RTS not low — instrument fault, test void).
   tier: target
@@ -637,7 +640,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.13
+fsd_version: 0.1.14
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -661,6 +664,7 @@ change_history:
   - 2026-10-18 0.1.11 CON-04 (a): the generated sdkconfig names USB-Serial/JTAG as primary console; the bench check alone passes a UART-primary image, whose secondary console defaults to USB-Serial/JTAG
   - 2026-10-18 0.1.12 FR-BOOT-02 (b): an untagged build must carry its own git describe; the tag case alone passes an image with a fixed version
   - 2026-10-18 0.1.13 Contract sweep (can each check fail?): CON-01 idf_ver exact; CON-04 (b) and FR-LOG-01 forbid only what the USB port can show; NFR-WDT-05 needs N ≥ 10; log colours in §12; §4 bench dependencies match the contracts
+  - 2026-10-18 0.1.14 FR-BOOT-02 (c) no version override (catches a dropped --dirty); NFR-WDT-05 compares the count with elapsed host time; FR-WDT-01 repeat adapted for blink; FR-WDT-01..03 no longer need a single bench reset (seam bring-up)
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
