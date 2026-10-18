@@ -162,7 +162,20 @@ capabilities:
     available: yes
   fault-injection-image:
     what: Firmware variants fault-heartbeat / fault-blink that stall a task after 10 s (FSD §11)
-    available: no        # arrives with FSD Phase 2; blocks FR-WDT-01..03 until built
+    available: yes
+    observed: >-
+      2026-10-18, SLOT4, branch feature/fault-inject at 3d07a43. CI builds both variants
+      (runs 39093158658, 39093160189); the variant check finds the marker
+      "stalling %s task" in each and not in production (run 39093156168). Bring-up
+      after a flash, no bench reset: fault-heartbeat printed the fault line ~11 s into
+      each boot, no heartbeat after it, task_wdt named "heartbeat" 5 s later, next
+      banner reset_reason=TASK_WDT (4/4 cycles); fault-blink the same with no LED line
+      after the fault line and task_wdt naming "blink" (5 cycles). Release b08f4dd
+      reflashed after.
+    consequence: >-
+      The fault line comes at the first task period at or after 10 s (heartbeat:
+      device ~11.1 s), not at exactly 10 s. A seam check only: FR-WDT-01..03 are
+      graded by their Wave 3 tests.
   release-verification:
     what: Tag-triggered journey run against the release artefact (build.yml verify job)
     available: yes       # the container runs 24/7; an absent bench at verify time is an unmet precondition (not done)
@@ -598,6 +611,56 @@ tests:
     impl: tests/target/test_soak.py::test_tc_wdt_05_console_unread_60_s
     status: not done
     reason: 'not done: needs bench-serial-port-control — the bench reads every console permanently'
+
+  # §11 Task watchdog — fault injection (Wave 3, declared, not written)
+  - id: TC-WDT-01-heartbeat
+    name: Stalled heartbeat task: panic naming it, reset in 4.5-6.5 s
+    shape: atomic
+    kind: negative
+    wave: 3
+    tier: target
+    verifies: [FR-WDT-01]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    image: fault-heartbeat
+    impl: ""
+    status: not done
+    reason: 'locked: Wave 3 — declared early for the fault-injection seam (test-design §5)'
+  - id: TC-WDT-01-blink
+    name: Stalled blink task: panic naming it, reset in 4.5-6.5 s
+    shape: atomic
+    kind: negative
+    wave: 3
+    tier: target
+    verifies: [FR-WDT-01]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    image: fault-blink
+    impl: ""
+    status: not done
+    reason: 'locked: Wave 3 — declared early for the fault-injection seam (test-design §5)'
+  - id: TC-WDT-02
+    name: Banner after a TWDT reset reports TASK_WDT
+    shape: atomic
+    kind: negative
+    wave: 3
+    tier: target
+    verifies: [FR-WDT-02]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    image: fault-heartbeat
+    impl: ""
+    status: not done
+    reason: 'locked: Wave 3 — declared early for the fault-injection seam (test-design §5)'
+  - id: TC-WDT-03
+    name: After a TWDT reset: banner, then n=1 within 1.5 s, no operator
+    shape: atomic
+    kind: negative
+    wave: 3
+    tier: target
+    verifies: [FR-WDT-03]
+    needs: [bench-flash, bench-serial-reset, bench-serial-monitor, bench-single-reset, fault-injection-image, dut-console-after-panic-reset]
+    image: fault-heartbeat
+    impl: ""
+    status: not done
+    reason: 'locked: Wave 3 — declared early for the fault-injection seam (test-design §5)'
 
 gates:
   load-defined:

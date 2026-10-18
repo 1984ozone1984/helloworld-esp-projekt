@@ -33,7 +33,8 @@ is selected by its own `sdkconfig.<variant>.defaults`
 builds into its own build directory. Release images never use them (FSD
 FR-BUILD-01). CI builds a variant only from a manual `workflow_dispatch`. A tag
 always builds production, and every build greps the `.bin` for
-`fault: stalling` in both directions.
+`stalling %s task` (the fault line's format string; the tag `fault` is stored
+apart, so `fault: stalling` never appears in any image) in both directions.
 
 ## Managed components
 

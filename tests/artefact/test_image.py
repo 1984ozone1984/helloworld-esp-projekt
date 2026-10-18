@@ -50,9 +50,13 @@ def test_tc_con_03_partitions_and_size(app_bin, partition_bin):
     assert len(app_bin) <= 1_048_576, f"app is {len(app_bin)} bytes"
 
 
-def test_tc_build_01_no_fault_path(app_bin):
-    """TC-BUILD-01 · FR-BUILD-01: the release image contains no fault-injection path."""
-    assert b"fault: stalling" not in app_bin
+def test_tc_build_01_no_fault_path(app_bin, sdkconfig):
+    """TC-BUILD-01 · FR-BUILD-01: the release image contains no fault-injection path.
+
+    The positive control (a fault image does contain the format string) is the
+    variant check in build.yml, which runs on every fault build.
+    """
+    assert 'CONFIG_HELLO_FAULT_STALL_TASK="none"' in sdkconfig.splitlines()
     assert b"stalling %s task" not in app_bin
 
 

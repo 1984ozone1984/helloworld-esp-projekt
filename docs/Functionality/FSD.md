@@ -534,7 +534,7 @@ persistent storage.
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
-| FR-BUILD-01 | Release artefact for tag `v0.1.0` · search the `.bin` for the string `fault: stalling` | Not found | String present | host |
+| FR-BUILD-01 | Release artefact for tag `v0.1.0` · read its generated `sdkconfig`; search its `.bin` for the fault line's format string `stalling %s task`; positive control: the same search on a fault-injection image of the same commit | `CONFIG_HELLO_FAULT_STALL_TASK="none"`; format string not found; positive control finds it | Any other stall task; format string present; positive control does not find it (search void) | host |
 
 The version identity of an image is FR-BOOT-02.
 
@@ -633,7 +633,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.9
+fsd_version: 0.1.10
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -653,6 +653,7 @@ change_history:
   - 2026-10-18 0.1.7 Load-defined round 2: interrupt watchdog and brownout in the state model, software reset ruled out; external dependencies of both phases named (author: keep contracts); NFR-SEC-01 (b) scan in ≤ 15 s pieces
   - 2026-10-18 0.1.8 Load-defined round 3: TWDT timeout possible in BOOTING (idle tasks); LIFE-T11 for a port opened with DTR/RTS asserted; prohibited transitions name the external resets; FR-BOOT-01 depends on a single bench reset; interrupt watchdog 300 ms and idle-task subscription stated
   - 2026-10-18 0.1.9 Load-defined round 4: LIFE-T12 bootloader RTC watchdog (9000 ms) in BOOTING; FR-WDT-01..03 also need a single bench reset; §4 assumption limited to what commissioning proved
+  - 2026-10-18 0.1.10 FR-BUILD-01 contract: search for the fault line's format string with a positive control, plus the generated sdkconfig; the literal `fault: stalling` is never contiguous in an image (tag and body are stored apart), so the old search passed any image
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
