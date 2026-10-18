@@ -59,8 +59,7 @@ capabilities:
       Tests read the first boot only (tests/target/console.py first_boot), so about
       5 s after a reset is observable. Anything needing longer from one boot
       (TC-HB-02: 10 heartbeats) is not done until the bench is fixed. Testbench
-      change request needed (Embedded-AI-Harness): "serial/reset on native-USB
-      ESP32-S3 resets the chip twice; second boot's early output lost".
+      change request: https://github.com/SensorsIot/Embedded-AI-Harness/issues/47.
   bench-serial-port-control:
     what: Close the DUT console port for a set time so nothing reads it, then reopen it with DTR/RTS low
     available: no
@@ -72,8 +71,7 @@ capabilities:
       earlier "available: yes" came from reading the endpoint's name.
     consequence: >-
       NFR-WDT-05 (TC-WDT-05) is not done until the bench can leave a console unread.
-      Testbench change request needed (Embedded-AI-Harness): "an endpoint to close a
-      slot's serial port for N seconds and reopen it with DTR/RTS low, without a reset".
+      Testbench change request: https://github.com/SensorsIot/Embedded-AI-Harness/issues/48.
   bench-wifi-scan:
     what: WiFi scan from the bench radio (GET /api/wifi/scan)
     available: yes
@@ -83,8 +81,8 @@ capabilities:
       the bench's FR-013 says it works alongside the AP.
     consequence: >-
       The DUT cannot be identified in a WiFi scan, so NFR-SEC-01's WiFi half is checked
-      on the image (FSD 0.1.5). Testbench change request: FR-013 and the live behaviour
-      disagree about scanning while the AP runs.
+      on the image (FSD 0.1.5). Testbench change request: https://github.com/SensorsIot/Embedded-AI-Harness/issues/50
+      (FR-013 vs live behaviour; no BSSID).
   bench-ble-scan:
     what: BLE advertisement scan (POST /api/ble/scan)
     available: yes
@@ -92,7 +90,7 @@ capabilities:
       2026-10-17. timeout 5/10/20 s returns 8-9 devices; timeout 30 s returns ok:false
       with an empty error.
     consequence: >-
-      Scan in 15 s pieces. Testbench change request: a 30 s scan fails without a reason.
+      Scan in 15 s pieces. Testbench change request: https://github.com/SensorsIot/Embedded-AI-Harness/issues/49.
   bench-operator-prompt:
     what: Block on an operator yes/no answered in the portal UI (POST /api/human-interaction)
     available: yes
