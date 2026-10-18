@@ -197,7 +197,7 @@ tests:
     observable: /api/flash returns ok for every image in coldflash/flash_args
     impl: tests/target/test_journey.py::test_jrn_01_1_flash
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: JRN-01.2
     name: Banner after reset
     shape: workflow
@@ -210,7 +210,7 @@ tests:
     observable: banner matching FSD A.1 within 3 s; version equals the flashed image's; reset_reason non-panic
     impl: tests/target/test_journey.py::test_jrn_01_2_banner
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: JRN-01.3
     name: Heartbeat running
     shape: workflow
@@ -223,7 +223,7 @@ tests:
     observable: heartbeat n=1, 2, 3 within 3.5 s of the banner, spaced 950–1050 ms
     impl: tests/target/test_journey.py::test_jrn_01_3_heartbeat
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: JRN-01.4
     name: LED toggling
     shape: workflow
@@ -236,7 +236,7 @@ tests:
     observable: led lines on/off/on/off within 2.5 s, spaced 450–550 ms
     impl: tests/target/test_journey.py::test_jrn_01_4_led
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: JRN-01.5
     name: Operator sees the blink
     shape: workflow
@@ -268,7 +268,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor, dut-console-after-reset]
     impl: tests/target/test_boot.py::test_tc_boot_01_banner_within_3s
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
     note: >-
       Reads the first boot only, so it cannot see a second banner; "exactly one
       banner per reset" is TC-BOOT-01-single (split 2026-10-18, FSD 0.1.8 §3.1).
@@ -282,7 +282,8 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor, bench-single-reset]
     impl: tests/target/test_boot.py::test_tc_boot_01_single_one_banner_per_reset
     status: not done
-    reason: 'not done: needs bench-single-reset — the bench resets the chip twice'
+    commit: 9f42d19
+    reason: 'not done: needs bench-single-reset — the bench reset the chip twice'
   - id: TC-BOOT-02
     name: Banner version equals the image's git describe
     shape: atomic
@@ -294,7 +295,7 @@ tests:
     impl: tests/target/test_boot.py::test_tc_boot_02_version_is_the_images
     note: Runs on untagged CI builds, so it is FR-BOOT-02 (b); (a) is the release journey's JRN-01.2.
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-BOOT-02-host
     name: Nothing overrides the git-describe version
     shape: atomic
@@ -305,7 +306,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_boot_02_no_version_override
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-BOOT-02-dirty
     name: A dirty-tree build reports its -dirty describe
     shape: atomic
@@ -316,8 +317,8 @@ tests:
     needs: [bench-flash, bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_boot.py::test_tc_boot_02_version_is_the_images
     image: dirty   # build.yml variant; expected version from the artefact name
-    status: not done
-    reason: not yet run (declared 2026-10-18 with FSD 0.1.15)
+    status: successful
+    commit: 9f42d19
   - id: TC-BOOT-03-host
     name: Every esp_reset_reason_t value maps to its A.2 name
     shape: atomic
@@ -339,7 +340,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_boot.py::test_tc_boot_03_reset_reason_after_bench_reset
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-CON-04-host
     name: Generated sdkconfig makes USB-Serial/JTAG the primary console
     shape: atomic
@@ -350,7 +351,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_04_console_config
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-CON-04
     name: Banner arrives on the USB-Serial/JTAG port
     shape: atomic
@@ -361,7 +362,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_boot.py::test_tc_con_04_console_is_usb_serial_jtag
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-LOG-01
     name: Banner, heartbeat and LED lines on the USB console
     shape: atomic
@@ -372,7 +373,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_console.py::test_tc_log_01_lines_on_usb_console
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-LOG-02-host
     name: Line bodies match A.1, no escapes, truncation reported
     shape: atomic
@@ -393,8 +394,8 @@ tests:
     verifies: [FR-LOG-01, FR-LOG-02]
     needs: [bench-flash, bench-serial-monitor, fault-injection-image]
     impl: tests/target/test_console.py::test_tc_log_03_fault_line_on_usb
-    status: not done
-    reason: not yet run (declared 2026-10-18 with FSD 0.1.15)
+    status: successful
+    commit: 9f42d19
   - id: TC-LOG-02
     name: Every hello/led/fault line on the wire matches A.1
     shape: atomic
@@ -405,7 +406,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_console.py::test_tc_log_02_every_normative_line_matches
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
 
   # §6 Heartbeat
   - id: TC-HB-01
@@ -418,7 +419,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_heartbeat.py::test_tc_hb_01_period
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-HB-02-host
     name: Counter starts at 1, steps by 1, restarts on init
     shape: atomic
@@ -440,7 +441,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor, bench-single-reset]
     impl: tests/target/test_heartbeat.py::test_tc_hb_02_counter_from_reset
     status: not done
-    commit: 6e091e1
+    commit: 9f42d19
     reason: 'not done: needs bench-single-reset — one boot yields only 5 heartbeats'
   - id: TC-HB-03
     name: uptime_ms grows 950-1050 per heartbeat
@@ -452,7 +453,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_heartbeat.py::test_tc_hb_03_uptime
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-HB-04
     name: 59-61 heartbeats per 60 s host time, no bursts
     shape: atomic
@@ -463,7 +464,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_heartbeat.py::test_tc_hb_04_host_rate
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
 
   # §7 Blinker · §9 LED driver · CON-05
   - id: TC-LED-01
@@ -476,7 +477,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_blinker.py::test_tc_led_01_toggle_period
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-LED-02-host
     name: Toggle from off alternates on/off
     shape: atomic
@@ -498,7 +499,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_blinker.py::test_tc_led_02_alternates
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-CON-05-host
     name: Active-low mapping, on -> 0 and off -> 1
     shape: atomic
@@ -555,7 +556,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_01_chip_and_idf
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-CON-02-host
     name: Image header says 8 MB flash
     shape: atomic
@@ -566,7 +567,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_02_header_flash_size
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-CON-02
     name: DUT reports at least 8 MB flash
     shape: atomic
@@ -577,7 +578,7 @@ tests:
     needs: [bench-flash]
     impl: tests/target/test_boot.py::test_tc_con_02_dut_flash_size
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-CON-03
     name: Single-factory partitions at stated offsets, app <= 1 MB
     shape: atomic
@@ -588,7 +589,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_03_partitions_and_size
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-CON-06
     name: Generated sdkconfig leaves PSRAM disabled
     shape: atomic
@@ -599,7 +600,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_06_no_psram
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-BUILD-01
     name: Release image has no fault-injection path
     shape: atomic
@@ -610,7 +611,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_build_01_no_fault_path
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-SEC-01-host
     name: No WiFi, PHY or Bluetooth stack linked
     shape: atomic
@@ -621,7 +622,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_sec_01_no_radio_stack
     status: successful
-    commit: 974b0d5
+    commit: 9f42d19
   - id: TC-SEC-01
     name: No BLE advertising from the DUT's addresses
     shape: atomic
@@ -632,7 +633,7 @@ tests:
     needs: [bench-ble-scan]
     impl: tests/bench/test_radio.py::test_tc_sec_01_ble_silent
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
 
   # §11 Task watchdog — normal operation
   - id: TC-WDT-04
@@ -645,7 +646,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor]
     impl: tests/target/test_soak.py::test_tc_wdt_04_soak_10_min
     status: successful
-    commit: 6e091e1
+    commit: 9f42d19
   - id: TC-WDT-05
     name: 60 s with the console unread, no reset
     shape: atomic
@@ -656,6 +657,7 @@ tests:
     needs: [bench-serial-reset, bench-serial-monitor, bench-serial-port-control]
     impl: tests/target/test_soak.py::test_tc_wdt_05_console_unread_60_s
     status: not done
+    commit: 9f42d19
     reason: 'not done: needs bench-serial-port-control — the bench reads every console permanently'
 
   # §11 Task watchdog — fault injection (Wave 3, declared, not written)
