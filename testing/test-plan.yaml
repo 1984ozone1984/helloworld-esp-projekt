@@ -479,8 +479,11 @@ tests:
     verifies: [FR-LED-03]
     needs: []
     impl: human-acceptance
-    status: not done
-    reason: acceptance not recorded
+    status: successful
+    commit: b08f4dd
+    acceptance: >-
+      2026-10-18, by the owner at the bench, SLOT4 running release image b08f4dd
+      (reflashed after agenda item 5): "led blinks at 1 Hz".
 
   # §2.2 constraints · §13 build · §14 security (image checks run in build.yml)
   - id: TC-CON-01
