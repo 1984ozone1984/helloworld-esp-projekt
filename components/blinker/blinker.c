@@ -10,6 +10,13 @@
 
 #define BLINK_HALF_PERIOD_MS 500
 
+static void (*s_tick_hook)(const char *task);
+
+void blinker_set_tick_hook(void (*hook)(const char *task))
+{
+    s_tick_hook = hook;
+}
+
 static void blink_task(void *arg)
 {
     (void)arg;
@@ -20,6 +27,9 @@ static void blink_task(void *arg)
     for (;;) {
         vTaskDelayUntil(&wake, pdMS_TO_TICKS(BLINK_HALF_PERIOD_MS));
         ESP_ERROR_CHECK(esp_task_wdt_reset());
+        if (s_tick_hook) {
+            s_tick_hook("blink");
+        }
         on = blink_toggle(on);
         led_set(on);
         if (fmt_led(line, sizeof line, on) >= 0) {

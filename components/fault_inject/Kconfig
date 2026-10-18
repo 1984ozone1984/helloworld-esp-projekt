@@ -1,0 +1,23 @@
+menu "helloworld-esp fault injection (FSD §11)"
+
+    choice HELLO_FAULT_STALL_TASK
+        prompt "Task to stall 10 s after RUNNING"
+        default HELLO_FAULT_STALL_TASK_NONE
+        help
+            Test-only build variant. Release images keep "none" (FSD FR-BUILD-01).
+
+        config HELLO_FAULT_STALL_TASK_NONE
+            bool "none"
+        config HELLO_FAULT_STALL_TASK_BLINK
+            bool "blink"
+        config HELLO_FAULT_STALL_TASK_HEARTBEAT
+            bool "heartbeat"
+    endchoice
+
+    config HELLO_FAULT_STALL_TASK
+        string
+        default "blink" if HELLO_FAULT_STALL_TASK_BLINK
+        default "heartbeat" if HELLO_FAULT_STALL_TASK_HEARTBEAT
+        default "none"
+
+endmenu

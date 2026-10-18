@@ -10,6 +10,13 @@
 
 #define HEARTBEAT_PERIOD_MS 1000
 
+static void (*s_tick_hook)(const char *task);
+
+void heartbeat_set_tick_hook(void (*hook)(const char *task))
+{
+    s_tick_hook = hook;
+}
+
 static void heartbeat_task(void *arg)
 {
     (void)arg;
@@ -21,6 +28,9 @@ static void heartbeat_task(void *arg)
     for (;;) {
         vTaskDelayUntil(&wake, pdMS_TO_TICKS(HEARTBEAT_PERIOD_MS));
         ESP_ERROR_CHECK(esp_task_wdt_reset());
+        if (s_tick_hook) {
+            s_tick_hook("heartbeat");
+        }
         uint32_t uptime_ms = (uint32_t)(esp_timer_get_time() / 1000);
         if (fmt_heartbeat(line, sizeof line, heartbeat_counter_next(&counter), uptime_ms) >= 0) {
             ESP_LOGI(CONSOLE_TAG_HELLO, "%s", line);
