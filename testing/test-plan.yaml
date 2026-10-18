@@ -524,7 +524,7 @@ tests:
     needs: []
     impl: "review: components/led/led.c"
     status: successful
-    commit: 6e091e1
+    commit: e297bbf
     review: >-
       2026-10-18, by Claude (author of the driver; owner countersign welcome).
       led.c: LED_GPIO is GPIO_NUM_21; gpio_config mode GPIO_MODE_OUTPUT (push-pull,
