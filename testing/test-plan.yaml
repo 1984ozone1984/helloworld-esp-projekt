@@ -304,8 +304,8 @@ tests:
     verifies: [FR-BOOT-02]
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_boot_02_no_version_override
-    status: not done
-    reason: not yet run (declared 2026-10-18 with FSD 0.1.14)
+    status: successful
+    commit: 974b0d5
   - id: TC-BOOT-03-host
     name: Every esp_reset_reason_t value maps to its A.2 name
     shape: atomic
@@ -338,7 +338,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_04_console_config
     status: successful
-    commit: 4b89bfd
+    commit: 974b0d5
   - id: TC-CON-04
     name: Banner arrives on the USB-Serial/JTAG port
     shape: atomic
@@ -532,7 +532,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_01_chip_and_idf
     status: successful
-    commit: 4b89bfd
+    commit: 974b0d5
   - id: TC-CON-02-host
     name: Image header says 8 MB flash
     shape: atomic
@@ -543,7 +543,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_02_header_flash_size
     status: successful
-    commit: 4b89bfd
+    commit: 974b0d5
   - id: TC-CON-02
     name: DUT reports at least 8 MB flash
     shape: atomic
@@ -565,7 +565,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_03_partitions_and_size
     status: successful
-    commit: 4b89bfd
+    commit: 974b0d5
   - id: TC-CON-06
     name: Generated sdkconfig leaves PSRAM disabled
     shape: atomic
@@ -576,7 +576,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_con_06_no_psram
     status: successful
-    commit: 4b89bfd
+    commit: 974b0d5
   - id: TC-BUILD-01
     name: Release image has no fault-injection path
     shape: atomic
@@ -587,7 +587,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_build_01_no_fault_path
     status: successful
-    commit: 4b89bfd
+    commit: 974b0d5
   - id: TC-SEC-01-host
     name: No WiFi, PHY or Bluetooth stack linked
     shape: atomic
@@ -598,7 +598,7 @@ tests:
     needs: [host-toolchain]
     impl: tests/artefact/test_image.py::test_tc_sec_01_no_radio_stack
     status: successful
-    commit: 4b89bfd
+    commit: 974b0d5
   - id: TC-SEC-01
     name: No BLE advertising from the DUT's addresses
     shape: atomic
