@@ -101,24 +101,27 @@ loses to it on disagreement.
 
 | ID | From | Event | Guard | To | Action | Limit | Verified by |
 |---|---|---|---|---|---|---|---|
-| LIFE-T1 | any | Reset released (power-on, EN, USB-JTAG, software, panic) | — | BOOTING | Bootloader starts the app | — | FR-BOOT-01 |
+| LIFE-T1 | any | Reset released (power-on, EN, USB-JTAG, brownout, panic) | — | BOOTING | Bootloader starts the app | — | FR-BOOT-01 |
 | LIFE-T2 | BOOTING | Initialisation complete | — | RUNNING | Emit banner; start blink and heartbeat tasks; subscribe both to TWDT | Banner ≤ 3000 ms after reset | FR-BOOT-01 |
 | LIFE-T3 | BOOTING | Initialisation error (any `esp_err_t` ≠ `ESP_OK`) | — | PANIC | Abort with the error name on the console | — | review only (tier other) |
 | LIFE-T4 | RUNNING | Blink period elapsed | — | RUNNING | Toggle LED; emit LED line | 500 ms | FR-LED-01 |
 | LIFE-T5 | RUNNING | Heartbeat period elapsed | — | RUNNING | Emit heartbeat line | 1000 ms | FR-HB-01 |
 | LIFE-T6 | RUNNING | TWDT timeout | — | PANIC | Print panic report naming the starved task | 5 s | FR-WDT-01 |
-| LIFE-T7 | BOOTING, RUNNING | CPU exception or `abort()` | — | PANIC | Print panic report with backtrace | — | review only (tier other) |
+| LIFE-T7 | BOOTING, RUNNING | CPU exception, `abort()` or interrupt-watchdog timeout | — | PANIC | Print panic report with backtrace | — | review only (tier other) |
 | LIFE-T8 | PANIC | Panic report complete | — | BOOTING | System reset | ≤ 1 s | FR-WDT-01, FR-WDT-03 |
 | LIFE-T9 | any | Host opens or closes the console port | — | unchanged | Ignored | — | NFR-WDT-05 |
 | LIFE-T10 | PANIC | CPU exception or watchdog while the panic handler runs | — | BOOTING | Chip reset without completing the report (ESP-IDF panic re-entry) | — | review only (tier other) |
 
 **Completeness.** The firmware has no inputs other than its own timers, the
-TWDT, CPU exceptions, reset, and the console port's open/close. A CPU exception
-or `abort()` is possible in every state: LIFE-T7 covers BOOTING and RUNNING,
+TWDT, the interrupt watchdog (ESP-IDF default, enabled), CPU exceptions, reset,
+brownout, and the console port's open/close. A CPU exception, `abort()` or
+interrupt-watchdog timeout is possible in every state: LIFE-T7 covers BOOTING and RUNNING,
 LIFE-T10 covers PANIC. Every other (state × event) pair is impossible by
 construction. A timer event in BOOTING or PANIC is impossible because the timers
 are started at LIFE-T2 and stop with the scheduler; a TWDT timeout in BOOTING is
-impossible because no task subscribes to the TWDT before LIFE-T2.
+impossible because no task subscribes to the TWDT before LIFE-T2. A software
+reset is impossible because the firmware never calls `esp_restart()`; the only
+software-initiated reset is the panic handler's, LIFE-T8.
 
 **Prohibited transitions.** RUNNING → BOOTING without passing through PANIC or an
 external reset (a silent reboot). PANIC → RUNNING without a reset.
@@ -185,6 +188,10 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
   LED and fault lines arrive in Phase 2).
 - **Depends on:** a testbench slot with the XIAO ESP32S3 Sense connected by USB-C,
   commissioned (journey Phase 2). Nothing from this FSD.
+- **Depends on (external):** FR-HB-02 (b) needs ten heartbeats from one boot, so
+  one bench reset must cause exactly one chip reset with that boot captured from
+  its first line. The testbench does not do this yet (a change request to the
+  testbench); until it does, FR-HB-02 (b) is not done and Phase 1 cannot exit.
 
 ### 3.2 Phase 2 — Blink, watchdog, versioned release
 
@@ -202,6 +209,13 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
     NFR-SEC-01 (a), and the host tier — CON-05 (a);
   - no firmware observation at all — CON-05 (b) by review, FR-LED-03 by a person at
     the board, NFR-SEC-01 (b) by the testbench BLE scan.
+- **Depends on (external):** two exit criteria rest on abilities neither phase
+  delivers. Until each exists, that criterion is not done and Phase 2 cannot exit:
+  - NFR-WDT-05 needs the testbench to close a slot's console port for 60 s and
+    reopen it with DTR/RTS low, without a reset (a change request to the testbench);
+  - FR-WDT-01…FR-WDT-03 need the console to capture the boot after a
+    firmware-initiated (panic) reset from its first line; this was proven only for
+    bench-issued resets (a commissioning item on the debugging agenda).
 
 ## 4. Risks, Assumptions & Dependencies
 
@@ -527,7 +541,7 @@ The version identity of an image is FR-BOOT-02.
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | NFR-SEC-01 (a) | Release ELF · read its symbol table; positive control: `app_main` and `esp_reset_reason` present | No WiFi, PHY or Bluetooth stack linked (`esp_wifi_init`, `esp_phy_enable`, `esp_bt_controller_init`, `nimble_port_init` absent) | Any of those symbols present; positive control missing (check void) | host |
-| NFR-SEC-01 (b) | DUT RUNNING; DUT base MAC from its chip info · testbench BLE scan, 30 s; positive control: other devices seen | No BLE address within base MAC … base MAC + 3 | Any DUT-derived address seen | bench |
+| NFR-SEC-01 (b) | DUT RUNNING; DUT base MAC from its chip info · testbench BLE scan totalling 30 s, in pieces of at most 15 s; positive control: other devices seen | No BLE address within base MAC … base MAC + 3 | Any DUT-derived address seen | bench |
 
 **Accepted risks.** No secure boot, flash encryption, or image signing. JTAG
 stays enabled. Anyone with USB access can read, alter, or replace the firmware.
@@ -601,7 +615,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.6
+fsd_version: 0.1.7
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -618,6 +632,7 @@ change_history:
   - 2026-10-17 0.1.4 FR-BOOT-01 measured by the banner's device timestamp; bench reset latency (10-11 s, batched output) makes the host clock unusable
   - 2026-10-17 0.1.5 NFR-SEC-01 WiFi half verified by the image's symbol table; the bench WiFi scan reports no BSSIDs
   - 2026-10-18 0.1.6 Load-defined gate findings: phase exits split FR-LOG-01/02 by line type and name each Phase-2 route; LIFE-T7 covers BOOTING, LIFE-T10 added; FR-WDT-01 forbids a silent reboot; §16.0 tiers match the contracts; CON-06 PSRAM disabled (author); TWDT timeout named in §2.2
+  - 2026-10-18 0.1.7 Load-defined round 2: interrupt watchdog and brownout in the state model, software reset ruled out; external dependencies of both phases named (author: keep contracts); NFR-SEC-01 (b) scan in ≤ 15 s pieces
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)

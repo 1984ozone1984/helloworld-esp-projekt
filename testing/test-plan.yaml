@@ -136,6 +136,9 @@ capabilities:
       GPIO21 is not on the XIAO header, so no bench instrument can see it. By the
       owner's decision (FSD 0.1.3), FR-LED-03 is a May with human acceptance and
       CON-05 is verified by host test and review. No automated test may need this.
+  dut-console-after-panic-reset:
+    what: The console captures the panic report and the next boot from its first line when the firmware resets itself
+    available: unproven   # debugging-agenda item 5; FR-WDT-01..03 need it (FSD 0.1.7 §3.2)
   operator:
     what: A person at the bench answers operator prompts during a run
     available: yes
