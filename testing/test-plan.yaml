@@ -318,7 +318,10 @@ tests:
     impl: tests/target/test_boot.py::test_tc_boot_02_version_is_the_images
     image: dirty   # build.yml variant; expected version from the artefact name
     status: successful
-    commit: 9f42d19
+    commit: 9f42d19-dirty   # Build Firmware run 39095135689; banner version=9f42d19-dirty
+    note: >-
+      Shares its impl with TC-BOOT-02, so tools/record_results.py stamps both from one
+      JUnit file; record this one by hand from a dirty-variant run.
   - id: TC-BOOT-03-host
     name: Every esp_reset_reason_t value maps to its A.2 name
     shape: atomic
