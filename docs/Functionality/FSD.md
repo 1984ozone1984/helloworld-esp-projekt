@@ -80,7 +80,9 @@ from a default:
 Two further values the build reads are normative in their own chapters: the
 TWDT timeout of **5 s** with panic on timeout (FR-WDT-01, `CONFIG_ESP_TASK_WDT_TIMEOUT_S`)
 and fault injection **`none`** in release images (FR-BUILD-01,
-`CONFIG_HELLO_FAULT_STALL_TASK`).
+`CONFIG_HELLO_FAULT_STALL_TASK`). Taken from ESP-IDF defaults and relied on by the
+state model `[tooling]`: both idle tasks subscribed to the TWDT, and the interrupt
+watchdog enabled at **300 ms**.
 
 ### 2.3 Software Architecture
 
@@ -101,38 +103,43 @@ loses to it on disagreement.
 
 | ID | From | Event | Guard | To | Action | Limit | Verified by |
 |---|---|---|---|---|---|---|---|
-| LIFE-T1 | any | Reset released (power-on, EN, USB-JTAG, brownout, panic) | — | BOOTING | Bootloader starts the app | — | FR-BOOT-01 |
+| LIFE-T1 | any | External reset released (power-on, EN, USB-JTAG, brownout) | — | BOOTING | Bootloader starts the app | — | FR-BOOT-01 |
 | LIFE-T2 | BOOTING | Initialisation complete | — | RUNNING | Emit banner; start blink and heartbeat tasks; subscribe both to TWDT | Banner ≤ 3000 ms after reset | FR-BOOT-01 |
 | LIFE-T3 | BOOTING | Initialisation error (any `esp_err_t` ≠ `ESP_OK`) | — | PANIC | Abort with the error name on the console | — | review only (tier other) |
 | LIFE-T4 | RUNNING | Blink period elapsed | — | RUNNING | Toggle LED; emit LED line | 500 ms | FR-LED-01 |
 | LIFE-T5 | RUNNING | Heartbeat period elapsed | — | RUNNING | Emit heartbeat line | 1000 ms | FR-HB-01 |
-| LIFE-T6 | RUNNING | TWDT timeout | — | PANIC | Print panic report naming the starved task | 5 s | FR-WDT-01 |
+| LIFE-T6 | BOOTING, RUNNING | TWDT timeout (blink, heartbeat or an idle task starved) | — | PANIC | Print panic report naming the starved task | 5 s | FR-WDT-01 |
 | LIFE-T7 | BOOTING, RUNNING | CPU exception, `abort()` or interrupt-watchdog timeout | — | PANIC | Print panic report with backtrace | — | review only (tier other) |
 | LIFE-T8 | PANIC | Panic report complete | — | BOOTING | System reset | ≤ 1 s | FR-WDT-01, FR-WDT-03 |
-| LIFE-T9 | any | Host opens or closes the console port | — | unchanged | Ignored | — | NFR-WDT-05 |
+| LIFE-T9 | any | Host opens or closes the console port | DTR and RTS low | unchanged | Ignored | — | NFR-WDT-05 |
+| LIFE-T11 | any | Host opens the console port | DTR or RTS asserted | outside the model | Chip held in reset or strapped into download mode; an external reset (LIFE-T1) when released | — | none: an observer fault (Method `standards/testing.md` P-SERIAL) |
 | LIFE-T10 | PANIC | CPU exception or watchdog while the panic handler runs | — | BOOTING | Chip reset without completing the report (ESP-IDF panic re-entry) | — | review only (tier other) |
 
 **Completeness.** The firmware has no inputs other than its own timers, the
 TWDT, the interrupt watchdog (ESP-IDF default, enabled), CPU exceptions, reset,
 brownout, and the console port's open/close. A CPU exception, `abort()` or
 interrupt-watchdog timeout is possible in every state: LIFE-T7 covers BOOTING and RUNNING,
-LIFE-T10 covers PANIC. Every other (state × event) pair is impossible by
+LIFE-T10 covers PANIC. Opening the port with DTR or RTS asserted is an external
+reset, not firmware behaviour (LIFE-T11). Every other (state × event) pair is impossible by
 construction. A timer event in BOOTING or PANIC is impossible because the timers
-are started at LIFE-T2 and stop with the scheduler; a TWDT timeout in BOOTING is
-impossible because no task subscribes to the TWDT before LIFE-T2. A software
+are started at LIFE-T2 and stop with the scheduler. A TWDT timeout is
+possible in BOOTING as well as RUNNING, because ESP-IDF subscribes both idle tasks
+before `app_main` (LIFE-T6). A software
 reset is impossible because the firmware never calls `esp_restart()`; the only
 software-initiated reset is the panic handler's, LIFE-T8.
 
-**Prohibited transitions.** RUNNING → BOOTING without passing through PANIC or an
-external reset (a silent reboot). PANIC → RUNNING without a reset.
+**Prohibited transitions.** RUNNING → BOOTING other than through PANIC
+(LIFE-T6/T7 → LIFE-T8) or an external reset (LIFE-T1: power-on, EN, USB-JTAG,
+brownout); anything else is a silent reboot. PANIC → RUNNING without a reset.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> BOOTING: reset released
+  [*] --> BOOTING: external reset released
   BOOTING --> RUNNING: init complete / banner
-  BOOTING --> PANIC: init error / exception
-  RUNNING --> RUNNING: blink / heartbeat tick
-  RUNNING --> PANIC: TWDT timeout / exception
+  BOOTING --> PANIC: init error / exception / TWDT / interrupt WDT
+  RUNNING --> RUNNING: blink / heartbeat tick / console open-close
+  RUNNING --> PANIC: TWDT / exception / interrupt WDT
+  RUNNING --> BOOTING: external reset
   PANIC --> BOOTING: system reset / fault in panic handler
 ```
 
@@ -188,10 +195,11 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
   LED and fault lines arrive in Phase 2).
 - **Depends on:** a testbench slot with the XIAO ESP32S3 Sense connected by USB-C,
   commissioned (journey Phase 2). Nothing from this FSD.
-- **Depends on (external):** FR-HB-02 (b) needs ten heartbeats from one boot, so
-  one bench reset must cause exactly one chip reset with that boot captured from
-  its first line. The testbench does not do this yet (a change request to the
-  testbench); until it does, FR-HB-02 (b) is not done and Phase 1 cannot exit.
+- **Depends on (external):** FR-BOOT-01 ("exactly one banner" per reset) and
+  FR-HB-02 (b) (ten heartbeats from one boot) need one bench reset to cause exactly
+  one chip reset, with that boot captured from its first line. The testbench does
+  not do this yet (a change request to the testbench); until it does, both are not
+  done and Phase 1 cannot exit.
 
 ### 3.2 Phase 2 — Blink, watchdog, versioned release
 
@@ -500,7 +508,8 @@ persistent storage.
 |---|---|---|
 | Blink half-period | 500 ms | FR-LED-01 |
 | Heartbeat period | 1000 ms | FR-HB-01 |
-| TWDT timeout | 5 s, panic on timeout, blink + heartbeat tasks subscribed | FR-WDT-01 |
+| TWDT timeout | 5 s, panic on timeout, blink + heartbeat + both idle tasks subscribed | FR-WDT-01, §2.3 |
+| Interrupt watchdog | enabled, 300 ms (ESP-IDF default) | §2.3 |
 | LED GPIO | 21, active-low | CON-05 |
 | Flash size | 8 MB | CON-02 |
 | Partition table | single factory app | CON-03 |
@@ -615,7 +624,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.7
+fsd_version: 0.1.8
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -633,6 +642,7 @@ change_history:
   - 2026-10-17 0.1.5 NFR-SEC-01 WiFi half verified by the image's symbol table; the bench WiFi scan reports no BSSIDs
   - 2026-10-18 0.1.6 Load-defined gate findings: phase exits split FR-LOG-01/02 by line type and name each Phase-2 route; LIFE-T7 covers BOOTING, LIFE-T10 added; FR-WDT-01 forbids a silent reboot; §16.0 tiers match the contracts; CON-06 PSRAM disabled (author); TWDT timeout named in §2.2
   - 2026-10-18 0.1.7 Load-defined round 2: interrupt watchdog and brownout in the state model, software reset ruled out; external dependencies of both phases named (author: keep contracts); NFR-SEC-01 (b) scan in ≤ 15 s pieces
+  - 2026-10-18 0.1.8 Load-defined round 3: TWDT timeout possible in BOOTING (idle tasks); LIFE-T11 for a port opened with DTR/RTS asserted; prohibited transitions name the external resets; FR-BOOT-01 depends on a single bench reset; interrupt watchdog 300 ms and idle-task subscription stated
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
