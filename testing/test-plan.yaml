@@ -564,15 +564,9 @@ tests:
 
 gates:
   load-defined:
-    verdict: SHUT
+    verdict: OPEN
     date: 2026-10-18
-    commit: 0f14268
-    findings:   # owned by /define; the AI-harnessed and DUT-ready verdicts were recorded without this gate open
-      - 'Row 7: Phase 1 exit names FR-LOG-01/02, whose contracts need LED and fault lines that only Phase 2 delivers; §3.2 says every Phase-2 observation is via Phase-1 console lines, but FR-LED-03, FR-BUILD-01 and NFR-SEC-01 are not'
-      - 'Row 3: §2.3 completeness claim false: no transition for a CPU exception/abort() in BOOTING, or a nested fault in PANIC'
-      - 'Judgement: FR-WDT-01 prohibited_outcomes do not forbid a reset with no panic report (silent reboot)'
-      - 'Row 1: §16.0 puts the LED driver and NFR-SEC-01 at bench tier; CON-05 is host/other and NFR-SEC-01 (a) is host'
-      - 'Judgement: TWDT timeout 5 s (sdkconfig.defaults) absent from §2.2; CONFIG_SPIRAM off contradicts "8 MB octal PSRAM" in §2.2, decision only in docs/Method/project/architecture.md'
+    commit: e68221a   # FSD 0.1.9; fifth fresh checker. Rounds 1-4 SHUT (0f14268, ea52f55, c630138, e0793ab), fixed in FSD 0.1.6-0.1.9
   ai-harnessed: {verdict: OPEN, date: 2026-10-17, commit: dc2e706}
   dut-ready: {verdict: OPEN, date: 2026-10-17, commit: 91de447}
   ready-for-shipment: {verdict: null, date: null, commit: null}
