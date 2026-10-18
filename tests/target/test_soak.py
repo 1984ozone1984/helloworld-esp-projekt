@@ -21,6 +21,8 @@ def test_tc_wdt_05_console_unread_60_s(bench, slot, boot):
     """TC-WDT-05 · NFR-WDT-05: 60 s with nobody reading the console, then n >= N + 58 and no banner."""
     before = [int(m.group(2)) for _, m in matches(capture_for(bench, slot, 5.0), HEARTBEAT)]
     assert before, "no heartbeat before closing the console"
+    if before[-1] < 10:
+        pytest.skip(f"not done: precondition N >= 10, N = {before[-1]}")
     close_console(bench, slot, 60.0)
     after = capture_for(bench, slot, 5.0)
     beats = matches(after, HEARTBEAT)

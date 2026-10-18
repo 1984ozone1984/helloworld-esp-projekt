@@ -69,11 +69,11 @@ from a default:
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
-| CON-01 | Release artefact · `esptool.py image_info` and app-description dump | Chip ID ESP32-S3; `idf_ver` begins `v6.0.2` | Any other chip ID or IDF version | host |
+| CON-01 | Release artefact · `esptool.py image_info` and app-description dump | Chip ID ESP32-S3; `idf_ver` equals `v6.0.2` | Any other chip ID or IDF version, including a suffixed one (`v6.0.2-dirty`, `v6.0.2-1-g<hash>`) | host |
 | CON-02 | Release artefact · `esptool.py image_info`; DUT · `esptool.py flash_id` | Image header flash size 8 MB; DUT reports ≥ 8 MB | Header size ≠ 8 MB; DUT reports < 8 MB | target |
 | CON-03 | Release artefact · read partition table and app size | Table matches the offsets/sizes above; app ≤ 1 048 576 bytes | Extra or moved partitions; app > 1 MB | host |
 | CON-04 (a) | Release artefact · read its generated `sdkconfig` | `CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y` and `CONFIG_ESP_CONSOLE_UART_NUM=-1` | Any UART primary console (`CONFIG_ESP_CONSOLE_UART_DEFAULT` or `_UART_CUSTOM` set) | host |
-| CON-04 (b) | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | Banner only on UART0 | target |
+| CON-04 (b) | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | No banner on the USB-Serial/JTAG port (UART0 is not observed; a UART-primary image is failed by CON-04 (a)) | target |
 | CON-05 (a) | Host test · LED driver pure core maps `on` and `off` to pin levels | `on` → 0, `off` → 1 | `on` → 1 | host |
 | CON-05 (b) | Review of the LED driver source | GPIO21 configured as push-pull output and driven high before the first blink | Any other pin; open-drain; LED lit before the first blink | other |
 | CON-06 | Release artefact · read the generated `sdkconfig` | `CONFIG_SPIRAM` is not set | `CONFIG_SPIRAM=y` | host |
@@ -253,8 +253,8 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
 
 **Dependencies**
 - ESP-IDF v6.0.2 (`espressif/idf:v6.0.2`).
-- The Embedded AI Harness testbench: serial monitor, hard reset, WiFi and BLE
-  scan.
+- The Embedded AI Harness testbench: flashing, chip info, serial monitor, hard
+  reset, BLE scan, and an operator prompt.
 
 **Explicitly out of scope** (considered and declined)
 - WiFi connection, OTA updates `[user]` — the minimal scope was chosen over both.
@@ -356,7 +356,7 @@ in the loop, a terminal for a person.
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
-| FR-LOG-01 | Same capture as FR-BOOT-01 + FR-HB-01, on the USB port only | All four line types present (fault line in the fault image only) | Lines appear only on UART0 | target |
+| FR-LOG-01 | Same capture as FR-BOOT-01 + FR-HB-01, on the USB port only | All four line types present (fault line in the fault image only) | Any of the four types missing from the USB capture | target |
 | FR-LOG-02 (a) | Host test · format each line type from fixed inputs | Output matches its A.1 regex | Escape bytes (0x1B); trailing spaces | host |
 | FR-LOG-02 (b) | 60 s capture after reset | Every line whose tag is `hello`, `led` or `fault` matches its A.1 regex | Any such line not matching | target |
 
@@ -488,7 +488,8 @@ verification:
 id: NFR-WDT-05
 verification:
   preconditions:
-    - Release image; DUT RUNNING; console open; last heartbeat n = N noted.
+    - Release image; DUT RUNNING; console open; last heartbeat n = N noted, with N ≥ 10
+      so that a reboot while closed cannot reach N + 58.
   stimulus:
     - Close the console port for 60 s (host-clock), then reopen with DTR/RTS low.
   expected_observations:
@@ -525,6 +526,7 @@ persistent storage.
 | Flash size | 8 MB | CON-02 |
 | Partition table | single factory app | CON-03 |
 | Console | USB-Serial/JTAG | CON-04 |
+| Log colours | disabled (`CONFIG_LOG_COLORS` unset) | FR-LOG-02 |
 | PSRAM | disabled | CON-06 |
 | Fault injection | `none` in release images | FR-BUILD-01 |
 
@@ -635,7 +637,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.12
+fsd_version: 0.1.13
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -658,6 +660,7 @@ change_history:
   - 2026-10-18 0.1.10 FR-BUILD-01 contract: search for the fault line's format string with a positive control, plus the generated sdkconfig; the literal `fault: stalling` is never contiguous in an image (tag and body are stored apart), so the old search passed any image
   - 2026-10-18 0.1.11 CON-04 (a): the generated sdkconfig names USB-Serial/JTAG as primary console; the bench check alone passes a UART-primary image, whose secondary console defaults to USB-Serial/JTAG
   - 2026-10-18 0.1.12 FR-BOOT-02 (b): an untagged build must carry its own git describe; the tag case alone passes an image with a fixed version
+  - 2026-10-18 0.1.13 Contract sweep (can each check fail?): CON-01 idf_ver exact; CON-04 (b) and FR-LOG-01 forbid only what the USB port can show; NFR-WDT-05 needs N ≥ 10; log colours in §12; §4 bench dependencies match the contracts
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)

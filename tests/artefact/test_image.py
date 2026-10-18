@@ -34,7 +34,7 @@ def test_tc_con_01_chip_and_idf(app_bin):
     assert app_bin[0] == 0xE9, "not an ESP image"
     chip_id, = struct.unpack_from("<H", app_bin, 12)
     assert chip_id == ESP32S3_CHIP_ID, f"chip id {chip_id}"
-    assert _app_desc(app_bin)["idf_ver"].startswith("v6.0.2")
+    assert _app_desc(app_bin)["idf_ver"] == "v6.0.2"
 
 
 def test_tc_con_02_header_flash_size(app_bin):
