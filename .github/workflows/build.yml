@@ -14,7 +14,7 @@ env:
   IDF_TAG: v6.0.2          # keep in step with the container tag below
   APP: helloworld-esp
   MULTI_VARIANT: 'true'
-  VARIANT_MARKER: 'fault: stalling'   # FSD FR-BUILD-01: only fault images contain it
+  VARIANT_MARKER: 'stalling %s task'  # FSD FR-BUILD-01: the fault line's format, only in fault images
 
 on:
   push:
