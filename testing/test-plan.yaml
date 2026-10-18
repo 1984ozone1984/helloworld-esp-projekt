@@ -316,6 +316,17 @@ tests:
     impl: tests/target/test_boot.py::test_tc_boot_03_reset_reason_after_bench_reset
     status: successful
     commit: 6e091e1
+  - id: TC-CON-04-host
+    name: Generated sdkconfig makes USB-Serial/JTAG the primary console
+    shape: atomic
+    kind: standard
+    wave: 1
+    tier: host
+    verifies: [CON-04]
+    needs: [host-toolchain]
+    impl: tests/artefact/test_image.py::test_tc_con_04_console_config
+    status: not done
+    reason: not yet run (declared 2026-10-18 with FSD 0.1.11)
   - id: TC-CON-04
     name: Banner arrives on the USB-Serial/JTAG port
     shape: atomic

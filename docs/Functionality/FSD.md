@@ -72,7 +72,8 @@ from a default:
 | CON-01 | Release artefact · `esptool.py image_info` and app-description dump | Chip ID ESP32-S3; `idf_ver` begins `v6.0.2` | Any other chip ID or IDF version | host |
 | CON-02 | Release artefact · `esptool.py image_info`; DUT · `esptool.py flash_id` | Image header flash size 8 MB; DUT reports ≥ 8 MB | Header size ≠ 8 MB; DUT reports < 8 MB | target |
 | CON-03 | Release artefact · read partition table and app size | Table matches the offsets/sizes above; app ≤ 1 048 576 bytes | Extra or moved partitions; app > 1 MB | host |
-| CON-04 | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | Banner only on UART0 | target |
+| CON-04 (a) | Release artefact · read its generated `sdkconfig` | `CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y` and `CONFIG_ESP_CONSOLE_UART_NUM=-1` | Any UART primary console (`CONFIG_ESP_CONSOLE_UART_DEFAULT` or `_UART_CUSTOM` set) | host |
+| CON-04 (b) | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | Banner only on UART0 | target |
 | CON-05 (a) | Host test · LED driver pure core maps `on` and `off` to pin levels | `on` → 0, `off` → 1 | `on` → 1 | host |
 | CON-05 (b) | Review of the LED driver source | GPIO21 configured as push-pull output and driven high before the first blink | Any other pin; open-drain; LED lit before the first blink | other |
 | CON-06 | Release artefact · read the generated `sdkconfig` | `CONFIG_SPIRAM` is not set | `CONFIG_SPIRAM=y` | host |
@@ -580,7 +581,7 @@ Step-by-step procedures: [`../UserDocumentation/User-Manual.md`](../UserDocument
 
 | Tier | Runs on | Covers here |
 |---|---|---|
-| **host** | Dev machine, plain compiler; release artefacts | Pure formatters (banner, heartbeat, LED lines), reset-reason name mapping, heartbeat counter, toggle function; artefact checks CON-01, CON-02 (header), CON-03, CON-06, FR-BUILD-01, NFR-SEC-01 (a); LED level mapping CON-05 (a) |
+| **host** | Dev machine, plain compiler; release artefacts | Pure formatters (banner, heartbeat, LED lines), reset-reason name mapping, heartbeat counter, toggle function; artefact checks CON-01, CON-02 (header), CON-03, CON-04 (a), CON-06, FR-BUILD-01, NFR-SEC-01 (a); LED level mapping CON-05 (a) |
 | **target** | DUT on the testbench, console over USB-Serial/JTAG | Timing, alternation, banner content, watchdog reset and recovery, console-closed behaviour |
 | **bench** | DUT + real peers (BLE scanner) | NFR-SEC-01 (b) |
 | **other** | Review or human acceptance | LIFE-T3, LIFE-T7, CON-05 (b), FR-LED-03 |
@@ -633,7 +634,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.10
+fsd_version: 0.1.11
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -654,6 +655,7 @@ change_history:
   - 2026-10-18 0.1.8 Load-defined round 3: TWDT timeout possible in BOOTING (idle tasks); LIFE-T11 for a port opened with DTR/RTS asserted; prohibited transitions name the external resets; FR-BOOT-01 depends on a single bench reset; interrupt watchdog 300 ms and idle-task subscription stated
   - 2026-10-18 0.1.9 Load-defined round 4: LIFE-T12 bootloader RTC watchdog (9000 ms) in BOOTING; FR-WDT-01..03 also need a single bench reset; §4 assumption limited to what commissioning proved
   - 2026-10-18 0.1.10 FR-BUILD-01 contract: search for the fault line's format string with a positive control, plus the generated sdkconfig; the literal `fault: stalling` is never contiguous in an image (tag and body are stored apart), so the old search passed any image
+  - 2026-10-18 0.1.11 CON-04 (a): the generated sdkconfig names USB-Serial/JTAG as primary console; the bench check alone passes a UART-primary image, whose secondary console defaults to USB-Serial/JTAG
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
