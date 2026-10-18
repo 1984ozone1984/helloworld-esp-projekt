@@ -225,8 +225,8 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
   - NFR-WDT-05 needs the testbench to close a slot's console port for 60 s and
     reopen it with DTR/RTS low, without a reset (a change request to the testbench);
   - FR-WDT-01…FR-WDT-03 need the console to capture the boot after a
-    firmware-initiated (panic) reset from its first line; this was proven only for
-    bench-issued resets (a commissioning item on the debugging agenda). Their
+    firmware-initiated (panic) reset from its first line (debugging-agenda item 5,
+    closed 2026-10-18). Their
     stimulus also waits for the fault line 10 s into RUNNING, so it needs the same
     single bench reset as FR-BOOT-01: today the first boot is observable for only
     about 5 s.
@@ -247,8 +247,8 @@ layers is a Method rule: [`../Method/project/architecture.md`](../Method/project
 - The testbench can issue a hard reset over USB-Serial/JTAG and capture console
   output from the first line after reconnect `[derived]` — confirmed during
   commissioning for the first boot after a bench reset only. The bench's second
-  chip reset loses that boot's first ~2 s, and resets the firmware causes itself
-  are not yet proven (§3, external dependencies).
+  chip reset loses that boot's first ~2 s (§3, external dependencies). Resets the
+  firmware causes itself are captured in full (debugging-agenda item 5).
 
 **Dependencies**
 - ESP-IDF v6.0.2 (`espressif/idf:v6.0.2`).

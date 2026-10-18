@@ -136,7 +136,18 @@ capabilities:
       CON-05 is verified by host test and review. No automated test may need this.
   dut-console-after-panic-reset:
     what: The console captures the panic report and the next boot from its first line when the firmware resets itself
-    available: unproven   # debugging-agenda item 5; FR-WDT-01..03 need it (FSD 0.1.7 §3.2)
+    available: yes
+    observed: >-
+      2026-10-18, SLOT4. Commissioning aid bfa9f20 (branch commission/panic-reset, never
+      merged; CI run 39092074013, flashed at its flash_args offsets) aborts 8 s into
+      every boot. A 75 s capture with no bench reset caught 9 of 9 cycles complete:
+      "abort() was called", backtrace, "Rebooting...", ROM banner with
+      rst:0xc (RTC_SW_CPU_RST), then the app banner with reset_reason=PANIC. Panic
+      report to banner 0.13-0.14 s host clock. Release image b08f4dd reflashed after.
+    consequence: >-
+      A panic reset is a CPU reset (RTC_SW_CPU_RST): the USB link stays up and nothing
+      is lost, unlike a bench reset. The aid used abort(); a TWDT panic takes the same
+      panic-handler reset path, which FR-WDT-01 itself will confirm.
   operator:
     what: A person at the bench answers operator prompts during a run
     available: yes
