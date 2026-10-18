@@ -515,7 +515,7 @@ tests:
     status: successful
     commit: 6e091e1
   - id: TC-CON-05-review
-    name: LED driver drives GPIO21 push-pull, high before the first blink
+    name: LED driver drives GPIO21 push-pull, high before the first blink, levels from led_level()
     shape: atomic
     kind: standard
     wave: 1
@@ -532,7 +532,9 @@ tests:
       before and after gpio_config. main/app_main.c calls led_init() before
       blinker_start(), the only caller of led_set(). Prohibited outcomes absent: no
       other pin, no open-drain, LED not lit before the first blink. Unchanged since
-      650b1c2.
+      650b1c2. Re-reviewed 2026-10-18 at e297bbf for FSD 0.1.16: the three
+      gpio_set_level(LED_GPIO, ...) calls in led.c (lines 12, 21, 26) all take
+      led_level(); no other file writes GPIO21 or calls gpio_config.
   - id: TC-LED-03-accept
     name: A person confirms the orange user LED blinks about 1 Hz
     shape: atomic

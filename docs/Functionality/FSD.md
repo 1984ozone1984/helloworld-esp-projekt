@@ -75,7 +75,7 @@ from a default:
 | CON-04 (a) | Release artefact · read its generated `sdkconfig` | `CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y` and `CONFIG_ESP_CONSOLE_UART_NUM=-1` | Any UART primary console (`CONFIG_ESP_CONSOLE_UART_DEFAULT` or `_UART_CUSTOM` set) | host |
 | CON-04 (b) | DUT flashed, port opened with DTR and RTS low · reset DUT | Banner (FR-BOOT-01) arrives on the USB-Serial/JTAG port | No banner on the USB-Serial/JTAG port (UART0 is not observed; a UART-primary image is failed by CON-04 (a)) | target |
 | CON-05 (a) | Host test · LED driver pure core maps `on` and `off` to pin levels | `on` → 0, `off` → 1 | `on` → 1 | host |
-| CON-05 (b) | Review of the LED driver source | GPIO21 configured as push-pull output and driven high before the first blink | Any other pin; open-drain; LED lit before the first blink | other |
+| CON-05 (b) | Review of the LED driver source | GPIO21 configured as push-pull output and driven high before the first blink; every write to GPIO21 takes its level from the pure core of (a) | Any other pin; open-drain; LED lit before the first blink; any write to GPIO21 whose level bypasses the pure core (polarity unchecked) | other |
 | CON-06 | Release artefact · read the generated `sdkconfig` | `CONFIG_SPIRAM` is not set | `CONFIG_SPIRAM=y` | host |
 
 Two further values the build reads are normative in their own chapters: the
@@ -642,7 +642,7 @@ The name is the `esp_reset_reason_t` enumerator without its `ESP_RST_` prefix:
 
 ```yaml
 document_status: baseline
-fsd_version: 0.1.15
+fsd_version: 0.1.16
 repository: https://github.com/1984ozone1984/helloworld-esp-projekt
 baseline_commit: (the commit introducing this file)
 applicable_firmware_version: v0.1.0
@@ -668,6 +668,7 @@ change_history:
   - 2026-10-18 0.1.13 Contract sweep (can each check fail?): CON-01 idf_ver exact; CON-04 (b) and FR-LOG-01 forbid only what the USB port can show; NFR-WDT-05 needs N ≥ 10; log colours in §12; §4 bench dependencies match the contracts
   - 2026-10-18 0.1.14 FR-BOOT-02 (c) no version override (catches a dropped --dirty); NFR-WDT-05 compares the count with elapsed host time; FR-WDT-01 repeat adapted for blink; FR-WDT-01..03 no longer need a single bench reset (seam bring-up)
   - 2026-10-18 0.1.15 FR-BOOT-02 (d) a dirty-tree build must report -dirty; FR-LOG-01/02 (c) read the fault line from a fault image
+  - 2026-10-18 0.1.16 CON-05 (b): every write to GPIO21 takes its level from the tested pure core, so a polarity bypass fails review
 superseded_requirements: []
 open_decisions: []
 related_test_baseline: testing/test-plan.yaml (created in journey Phase 1)
