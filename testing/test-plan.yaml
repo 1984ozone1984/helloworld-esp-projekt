@@ -91,6 +91,15 @@ capabilities:
       with an empty error.
     consequence: >-
       Scan in 15 s pieces. Testbench change request: https://github.com/SensorsIot/Embedded-AI-Harness/issues/49.
+  bench-usb-power-cycle:
+    what: Switch a slot's USB power off and on, so the DUT boots from a true power-on, captured from its first line
+    available: no
+    observed: >-
+      2026-10-18. No power control in the portal; /api/devices reports hub_port: null,
+      power: null for SLOT4.
+    consequence: >-
+      TC-BOOT-04 (power-on boot, Wave 2) is not done until it exists. Testbench change
+      request: https://github.com/SensorsIot/Embedded-AI-Harness/issues/51.
   bench-operator-prompt:
     what: Block on an operator yes/no answered in the portal UI (POST /api/human-interaction)
     available: yes
@@ -160,6 +169,12 @@ capabilities:
   host-toolchain:
     what: Host C compiler + CMake/CTest for tests/host, in CI (ci.yml) and the devcontainer
     available: yes
+  release-tag:
+    what: A release tag v0.1.0 exists, so dev builds describe as v0.1.0-N-g<hash>
+    available: no
+    consequence: >-
+      Tags are minted only at shipment, by the owner (build skill §6), so TC-BOOT-05 waits
+      for the first release. Not a gap to close early.
   fault-injection-image:
     what: Firmware variants fault-heartbeat / fault-blink that stall a task after 10 s (FSD §11)
     available: yes
@@ -664,6 +679,43 @@ tests:
     status: not done
     commit: 9f42d19
     reason: 'not done: needs bench-serial-port-control — the bench reads every console permanently'
+
+  # Wave 2 — deviations that need equipment, declared early, not written.
+  # Candidates needing nothing new (e.g. radio silence across a reset) are
+  # written when Wave 2 opens, not declared here.
+  - id: TC-BOOT-04
+    name: Power-on boot: banner within 3000 ms, reset_reason=POWERON, n starts at 1
+    shape: atomic
+    kind: deviation
+    wave: 2
+    tier: target
+    verifies: [FR-BOOT-01, FR-BOOT-03, FR-HB-02]
+    needs: [bench-usb-power-cycle, bench-serial-monitor]
+    impl: ""
+    status: not done
+    reason: 'locked: Wave 2 — declared early because it needs bench-usb-power-cycle (test-design §5)'
+  - id: TC-BOOT-05
+    name: Dev build after a release tag reports v0.1.0-N-g<hash>
+    shape: atomic
+    kind: deviation
+    wave: 2
+    tier: target
+    verifies: [FR-BOOT-02]
+    needs: [release-tag, bench-flash, bench-serial-reset, bench-serial-monitor]
+    impl: ""
+    status: not done
+    reason: 'locked: Wave 2 — declared early because it needs release-tag (test-design §5)'
+  - id: TC-LOG-04
+    name: Console attached mid-run: lines conform from the first whole line, no reset
+    shape: atomic
+    kind: deviation
+    wave: 2
+    tier: target
+    verifies: [FR-LOG-01, FR-LOG-02, NFR-WDT-05]
+    needs: [bench-serial-port-control, bench-serial-monitor]
+    impl: ""
+    status: not done
+    reason: 'locked: Wave 2 — declared early because it needs bench-serial-port-control (test-design §5)'
 
   # §11 Task watchdog — fault injection (Wave 3, declared, not written)
   - id: TC-WDT-01-heartbeat
